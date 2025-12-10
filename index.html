@@ -166,7 +166,7 @@
             return u;
         };
 
-        // --- NEW: Helper สำหรับแปลงลิ้งก์ PDF ---
+        // --- Helper สำหรับแปลงลิ้งก์ PDF ---
         const getCleanPdfUrl = (url) => {
             if (!url) return '';
             const u = url.trim();
@@ -426,7 +426,7 @@
                 <div className="content-container py-12 fade-in">
                     <button onClick={onBack} className="mb-8 bg-gray-50 hover:bg-blue-50 text-[#004993] border border-blue-100 px-6 py-2.5 rounded-full flex items-center gap-2 transition font-bold shadow-sm hover:shadow-md group"><i className="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i> ย้อนกลับ</button>
                     <div className="bg-white rounded-[2rem] shadow-xl overflow-hidden border border-gray-100">
-                        {/* --- UPDATE: Logic การแสดงผล PDF หรือ รูปภาพ --- */}
+                        {/* Logic: ถ้ามี PDF URL ให้โชว์ iframe แทนรูปภาพ */}
                         {item.PDF_URL ? (
                             <div className="w-full h-[800px] bg-gray-100 mb-8 border-b border-gray-200">
                                 <iframe 
@@ -451,7 +451,7 @@
                         
                         <div className="p-12 md:p-16 max-w-5xl mx-auto">
                             <div className="flex flex-wrap items-center gap-4 mb-8">
-                                <span className="bg-blue-50 text-[#004993] px-4 py-1.5 rounded-full text-sm font-bold shadow-sm border border-blue-100">{item.Category}</span>
+                                <span className="bg-blue-50 text-[#003366] px-4 py-1.5 rounded-full text-sm font-bold shadow-sm border border-blue-100">{item.Category}</span>
                                 <span className="text-gray-500 text-sm flex items-center gap-2 font-medium"><i className="far fa-calendar-alt"></i> {new Date(item.Date).toLocaleDateString('th-TH', { dateStyle: 'long' })}</span>
                             </div>
                             <h1 className="text-3xl md:text-4xl font-bold text-primary mb-10 leading-tight">{item.Title}</h1>
@@ -462,13 +462,22 @@
             </div>
         );
 
+        // --- UPDATE: ปรับ NewsCard ให้แสดง PDF iframe เลยถ้ามีลิ้งก์ ---
         const NewsCard = ({ n, onClick }) => (
             <div onClick={onClick} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col group cursor-pointer hover:shadow-2xl hover:-translate-y-2 transition duration-300 transform">
                 <div className="h-64 overflow-hidden relative bg-gray-100">
-                     <img src={getCleanImageUrl(n.ImageURL)} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/400?text=News';}} />
-                     <div className="absolute top-4 left-4"><span className="bg-white/95 backdrop-blur text-[#004993] text-xs font-bold px-3 py-1.5 rounded-lg shadow-md">{n.Category}</span></div>
-                     {/* Indicator ว่ามี PDF */}
-                     {n.PDF_URL && <div className="absolute bottom-4 right-4"><span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded shadow"><i className="fas fa-file-pdf mr-1"></i> PDF</span></div>}
+                     {n.PDF_URL ? (
+                        <iframe 
+                            src={getCleanPdfUrl(n.PDF_URL)} 
+                            className="w-full h-full object-cover" 
+                            style={{border:0}}
+                            loading="lazy"
+                        ></iframe>
+                     ) : (
+                         <img src={getCleanImageUrl(n.ImageURL)} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/400?text=News';}} />
+                     )}
+                     
+                     <div className="absolute top-4 left-4 pointer-events-none"><span className="bg-white/95 backdrop-blur text-[#003366] text-xs font-bold px-3 py-1.5 rounded-lg shadow-md">{n.Category}</span></div>
                 </div>
                 <div className="p-8 flex-1 flex flex-col">
                     <div className="text-xs text-gray-400 mb-3 font-medium flex items-center gap-2"><i className="far fa-clock"></i> {new Date(n.Date).toLocaleDateString('th-TH')}</div>
@@ -574,7 +583,7 @@
                 'Title': 'หัวข้อ / ชื่อ', 
                 'Content': 'เนื้อหา (HTML/Embed)', 
                 'ImageURL': 'ลิงก์รูปภาพ (URL)', 
-                'PDF_URL': 'ลิ้งก์ PDF (Google Drive)', /* เพิ่ม Label */
+                'PDF_URL': 'ลิ้งก์ PDF (Google Drive)', 
                 'Category': 'หมวดหมู่', 
                 'Name': 'ชื่อ-นามสกุล', 
                 'Position': 'ตำแหน่ง', 
@@ -874,7 +883,6 @@
                                             {tab === 'News' && <>
                                                 <div><label className="text-sm font-bold text-gray-600 mb-1 block">หัวข้อข่าว</label><input className="w-full border p-3 rounded-lg" value={form.Title||''} onChange={e=>setForm({...form, Title: e.target.value})} placeholder="ใส่หัวข้อข่าวที่นี่..." /></div>
                                                 
-                                                {/* --- UPDATE: เพิ่มช่องกรอก PDF_URL --- */}
                                                 <div>
                                                     <label className="text-sm font-bold text-gray-600 mb-1 block">ลิ้งก์ PDF (Google Drive) <span className="text-red-500 font-normal text-xs ml-2">(ถ้ามีจะโชว์แทนรูปภาพ)</span></label>
                                                     <input className="w-full border p-3 rounded-lg" value={form.PDF_URL||''} onChange={e=>setForm({...form, PDF_URL: e.target.value})} placeholder="https://drive.google.com/file/d/.../view" />
@@ -900,7 +908,7 @@
                                             {Object.keys(tab === 'Settings' ? {} : (editItem._isNew ? (data[tab][0] || {}) : editItem)).map(k => { 
                                                 if(['ID','Date','PageKey','Key','MenuCategory','Title','Label','Type','Order','_isNew','settings'].includes(k)) return null; 
                                                 if(k.startsWith('_page')) return null; 
-                                                if(tab === 'News' && (k === 'Content' || k === 'PDF_URL')) return null; /* ซ่อน PDF_URL ในลูป เพราะใส่ข้างบนแล้ว */
+                                                if(tab === 'News' && (k === 'Content' || k === 'PDF_URL')) return null; 
                                                 return <div key={k}><label className="text-sm font-bold text-gray-600 mb-1 block">{getLabel(k)}{k === 'ImageURL' && imageHints[tab] && <span className="text-blue-500 font-normal text-xs ml-2">({imageHints[tab]})</span>}</label>{k === 'Content' ? <div className="space-y-1"><textarea className="w-full border p-3 rounded-lg h-48 font-mono text-sm" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder="ใส่ข้อความ หรือ HTML"></textarea></div> : <input className="w-full border p-3 rounded-lg" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} />}</div> 
                                             })}
                                             <div className="flex gap-4"><button type="submit" className="flex-1 bg-primary text-white py-3 rounded-lg font-bold shadow hover:opacity-90 transition">บันทึกข้อมูล</button>{!editItem._isNew && tab !== 'Settings' && (<button type="button" onClick={() => handleDelete(editItem.ID || editItem.PageKey)} className="bg-red-500 text-white px-6 py-3 rounded-lg font-bold shadow hover:bg-red-600 transition"><i className="fas fa-trash-alt mr-2"></i> ลบข้อมูล</button>)}</div>
@@ -1076,4 +1084,5 @@
     </script>
 </body>
 </html>
+
 
