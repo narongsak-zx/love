@@ -226,7 +226,6 @@
                     if (targetPage) {
                         setPage({id: 'page', key: targetPage.PageKey});
                     } else {
-                        // หน้าว่าง (ยังไม่มีเนื้อหา)
                         alert('ยังไม่มีเนื้อหาสำหรับเมนูนี้ กรุณาเพิ่มข้อมูลในระบบหลังบ้าน');
                     }
                     setActiveDropdown(null);
@@ -559,23 +558,20 @@
                 setEditItem(item);
                 let initialForm = { ...item };
 
-                // *** NEW LOGIC: ถ้าเป็นเมนูประเภท Page ให้ไปดึงข้อมูล Page มาใส่ในฟอร์มเลย ***
                 if (tab === 'Menus' && item.Type === 'page') {
                     const linkedPage = data.Pages.find(p => p.MenuCategory === item.ID);
                     if (linkedPage) {
                         initialForm = {
                             ...initialForm,
-                            // เก็บข้อมูลของ Page ลงใน state form ด้วย
                             _pageKey: linkedPage.PageKey,
                             _pageTitle: linkedPage.Title,
                             _pageContent: linkedPage.Content,
                             _pageImage: linkedPage.ImageURL
                         };
                     } else {
-                        // ถ้ายังไม่มี Page ให้เตรียมค่าว่างไว้
                         initialForm = {
                             ...initialForm,
-                            _pageTitle: item.Label, // Default title ตามชื่อเมนู
+                            _pageTitle: item.Label,
                             _pageContent: '',
                             _pageImage: ''
                         };
@@ -606,10 +602,6 @@
                         ));
                         
                     } else if (tab === 'Menus') {
-                        // *** NEW LOGIC: บันทึก Menu และถ้าเป็น Page ให้บันทึก Page ด้วย ***
-                        
-                        // 1. บันทึกตัวเมนูลง Sheet 'Menus' ก่อน
-                        // กรองเอาเฉพาะ field ของเมนูจริงๆ เพื่อไม่ให้ error หรือมีข้อมูลขยะ
                         const menuPayload = {
                             ID: editItem._isNew ? form.ID : form.ID,
                             Label: form.Label,
@@ -618,21 +610,19 @@
                         };
                         await api.post({ action: 'save', sheet: 'Menus', data: menuPayload });
 
-                        // 2. ถ้าเป็นประเภท Page ให้บันทึกเนื้อหาลง Sheet 'Pages' ต่อเลย
                         if (form.Type === 'page') {
                             const pagePayload = {
-                                PageKey: form._pageKey || ('page_' + Date.now()), // ถ้ามี key เดิมใช้ key เดิม ถ้าไม่มีสร้างใหม่
+                                PageKey: form._pageKey || ('page_' + Date.now()), 
                                 Title: form._pageTitle || form.Label,
                                 Content: form._pageContent || '',
                                 ImageURL: form._pageImage || '',
-                                MenuCategory: form.ID, // ผูกกับ ID ของเมนู
+                                MenuCategory: form.ID, 
                                 Order: 1
                             };
                             await api.post({ action: 'save', sheet: 'Pages', data: pagePayload });
                         }
 
                     } else { 
-                        // กรณีอื่นๆ (News, Personnel, etc.) ทำงานปกติ
                         const idToUse = editItem._isNew ? form.ID : (editItem.ID || editItem.PageKey);
                         let payload = { ...form, ID: idToUse };
                         if (tab === 'Pages') { payload.PageKey = idToUse; }
@@ -653,15 +643,44 @@
                 }
             };
 
+            // *** NEW LOGIC: CASCADE DELETE ***
             const handleDelete = async (id) => { 
-                if(confirm('ยืนยันการลบรายการนี้? การกระทำนี้ไม่สามารถย้อนกลับได้')) { 
-                    await api.post({ action: 'delete', sheet: tab, id }); 
-                    
-                    // ถ้าลบเมนู อาจจะต้องลบ page ด้วยไหม? (ในที่นี้ปล่อยไว้ก่อน เพื่อความปลอดภัย)
-                    
-                    alert('ลบข้อมูลเรียบร้อย');
-                    setEditItem(null); 
-                    reload(); 
+                // ค้นหาเมนูที่จะลบก่อน (เฉพาะกรณีอยู่ในแท็บ Menus)
+                let confirmMessage = 'ยืนยันการลบรายการนี้? การกระทำนี้ไม่สามารถย้อนกลับได้';
+                let relatedPagesToDelete = [];
+
+                if (tab === 'Menus') {
+                    const menuItem = data.Menus.find(m => m.ID === id);
+                    if (menuItem) {
+                        // ถ้าไม่ใช่ Link (คือเป็น Page หรือ Dropdown) ให้หาเนื้อหาที่เกี่ยวข้อง
+                        if (menuItem.Type !== 'link') {
+                            relatedPagesToDelete = data.Pages.filter(p => p.MenuCategory === id);
+                            if (relatedPagesToDelete.length > 0) {
+                                confirmMessage = `คำเตือน! เมนูนี้มีเนื้อหาหน้าย่อย ${relatedPagesToDelete.length} รายการ\nหากลบเมนูนี้ เนื้อหาทั้งหมดจะถูกลบไปด้วย\n\nยืนยันการลบทั้งหมดหรือไม่?`;
+                            }
+                        }
+                    }
+                }
+
+                if(confirm(confirmMessage)) { 
+                    try {
+                        // 1. ถ้ามีเนื้อหาที่เกี่ยวข้อง ต้องลบออกก่อน
+                        if (relatedPagesToDelete.length > 0) {
+                            // ใช้ Loop ลบทีละรายการ (เพื่อความชัวร์)
+                            for (const page of relatedPagesToDelete) {
+                                await api.post({ action: 'delete', sheet: 'Pages', id: page.PageKey });
+                            }
+                        }
+
+                        // 2. ลบรายการหลัก
+                        await api.post({ action: 'delete', sheet: tab, id }); 
+                        
+                        alert('ลบข้อมูลเรียบร้อย');
+                        setEditItem(null); 
+                        reload(); 
+                    } catch (err) {
+                        alert('เกิดข้อผิดพลาดในการลบ: ' + err.toString());
+                    }
                 } 
             };
             
@@ -787,7 +806,6 @@
                                                     </select>
                                                 </div>
 
-                                                {/* *** NEW UI: ถ้าเลือกประเภท Page ให้แสดงฟอร์มเนื้อหาตรงนี้เลย *** */}
                                                 {form.Type === 'page' && (
                                                     <div className="mt-4 border-t-2 border-blue-100 pt-6 animate-fadeIn bg-blue-50 p-4 rounded-xl">
                                                         <h4 className="text-primary font-bold text-lg mb-4 flex items-center gap-2"><i className="fas fa-file-alt"></i> จัดการเนื้อหาของหน้านี้</h4>
@@ -832,9 +850,8 @@
                                             </>} 
                                             
                                             {Object.keys(tab === 'Settings' ? {} : (editItem._isNew ? (data[tab][0] || {}) : editItem)).map(k => { 
-                                                // ซ่อน field ปกติ ถ้าเราจัดการ manual ไปแล้ว หรือเป็น field ชั่วคราวที่เราสร้างขึ้น
                                                 if(['ID','Date','PageKey','Key','MenuCategory','Title','Label','Type','Order','_isNew','settings'].includes(k)) return null; 
-                                                if(k.startsWith('_page')) return null; // ซ่อน temporary fields
+                                                if(k.startsWith('_page')) return null; 
                                                 if(tab === 'News' && k === 'Content') return null;
                                                 return <div key={k}><label className="text-sm font-bold text-gray-600 mb-1 block">{getLabel(k)}{k === 'ImageURL' && imageHints[tab] && <span className="text-blue-500 font-normal text-xs ml-2">({imageHints[tab]})</span>}</label>{k === 'Content' ? <div className="space-y-1"><textarea className="w-full border p-3 rounded-lg h-48 font-mono text-sm" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder="ใส่ข้อความ หรือ HTML"></textarea></div> : <input className="w-full border p-3 rounded-lg" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} />}</div> 
                                             })}
