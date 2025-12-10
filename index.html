@@ -523,7 +523,16 @@
         };
 
         const AdminPanel = ({ data, reload, onLogout }) => {
-            const [tab, setTab] = useState('News');
+            // UPDATED: ใช้ sessionStorage เพื่อจำสถานะ Tab เมื่อ Refresh
+            const [tab, setTab] = useState(() => {
+                return sessionStorage.getItem('phukham_admin_tab') || 'News';
+            });
+
+            // UPDATED: บันทึกสถานะลง sessionStorage ทุกครั้งที่ tab เปลี่ยน
+            useEffect(() => {
+                sessionStorage.setItem('phukham_admin_tab', tab);
+            }, [tab]);
+
             const [editItem, setEditItem] = useState(null);
             const [form, setForm] = useState({});
             
