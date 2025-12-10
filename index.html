@@ -154,15 +154,33 @@
             post: async (payload) => await (await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })).json()
         };
 
+        // --- UPDATE: ฟังก์ชันแปลงลิ้งก์รูปภาพ (รองรับ Google Drive แบบ Full Support) ---
         const getCleanImageUrl = (url) => {
             if (!url) return '';
             const u = url.trim();
-            if (u.includes('drive.google.com') && u.includes('/view')) {
-                return u.replace('/view', '/preview').replace('file/d/', 'uc?id=').replace('/preview', '');
+            
+            // ตรวจสอบว่าเป็นลิงก์ Google Drive หรือไม่
+            if (u.includes('drive.google.com')) {
+                let id = '';
+                
+                // ลองดึง ID จากรูปแบบ /file/d/xxxxx/
+                const parts = u.split('/');
+                const dIndex = parts.indexOf('d');
+                if (dIndex !== -1 && parts[dIndex + 1]) {
+                    id = parts[dIndex + 1];
+                } 
+                // ลองดึง ID จากรูปแบบ id=xxxxx
+                else if (u.includes('id=')) {
+                    const match = u.match(/id=([a-zA-Z0-9_-]+)/);
+                    if (match && match[1]) id = match[1];
+                }
+
+                if (id) {
+                    // ใช้ endpoint thumbnail เพื่อความเร็วและลดปัญหา quota limit (sz=w1920 เพื่อให้ได้รูปใหญ่ชัดเจน)
+                    return `https://drive.google.com/thumbnail?id=${id}&sz=w1920`;
+                }
             }
-            if (u.includes('drive.google.com/open?id=')) {
-                return u.replace('open?id=', 'uc?id=');
-            }
+            
             return u;
         };
 
@@ -462,7 +480,7 @@
             </div>
         );
 
-        // --- UPDATE: ปรับ NewsCard ให้แสดง PDF iframe เลยถ้ามีลิ้งก์ ---
+        // --- NewsCard ให้แสดง PDF iframe เลยถ้ามีลิ้งก์ ---
         const NewsCard = ({ n, onClick }) => (
             <div onClick={onClick} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col group cursor-pointer hover:shadow-2xl hover:-translate-y-2 transition duration-300 transform">
                 <div className="h-64 overflow-hidden relative bg-gray-100">
