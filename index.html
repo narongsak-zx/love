@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=1280">
     <title>โรงเรียนพุขามครุฑมณีอุทิศ</title>
     
+    <!-- ========================================== -->
+    <!-- 1. External Libraries                      -->
+    <!-- ========================================== -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -12,6 +15,9 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- ========================================== -->
+    <!-- 2. Styles (CSS)                            -->
+    <!-- ========================================== -->
     <style>
         html, body {
             margin: 0;
@@ -141,67 +147,59 @@
     </style>
 </head>
 <body>
-    
-    <img src="https://github.com/KongNontawatDev/Black-Mourning-Ribbon/blob/2150640c0e623c7fbcca07024287b597f7999a84/ribbon_top_right.png?raw=true" 
-     alt="Black mourning ribbon for websites, top right corner, ริบบิ้นไว้ทุกข์สีดำ มุมบนขวา สำหรับแสดงความอาลัยบนเว็บไซต์" 
-     style="position:fixed; top:0; right:0; width:80px; opacity:0.9; z-index:9999; pointer-events:none;">
+
+    <!-- Ribbon: Corrected URL -->
+    <img src="https://raw.githubusercontent.com/KongNontawatDev/Black-Mourning-Ribbon/2150640c0e623c7fbcca07024287b597f7999a84/ribbon_top_right.png" 
+     alt="Black mourning ribbon for websites, top right corner" 
+     style="position:fixed; top:0; right:0; width:85px; opacity:0.9; z-index:9999; pointer-events:none;"
+     onError="this.src='https://raw.githubusercontent.com/Kaiat/ribbon/master/black-ribbon-top-right.png';">
+     
     <div id="root"></div>
 
     <script type="text/babel">
-        // แก้ไข URL เป็น App Script ของคุณ
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxM2oNuwTIu-6i2Xh-ll6CG8MTmzT0Yi1jdMkG-ajHo32FBed1XIB0MKkE0sTsC1uqH/exec"; 
+        // ==========================================
+        // 3. Config
+        // ==========================================
+        const CONFIG = {
+            APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxM2oNuwTIu-6i2Xh-ll6CG8MTmzT0Yi1jdMkG-ajHo32FBed1XIB0MKkE0sTsC1uqH/exec"
+        };
         
         const { useState, useEffect, useRef } = React;
 
         const api = {
-            fetchAll: async () => await (await fetch(`${APPS_SCRIPT_URL}?action=readAll`)).json(),
-            post: async (payload) => await (await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })).json()
+            fetchAll: async () => await (await fetch(`${CONFIG.APPS_SCRIPT_URL}?action=readAll`)).json(),
+            post: async (payload) => await (await fetch(CONFIG.APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })).json()
         };
 
-        // --- UPDATE: ฟังก์ชันแปลงลิ้งก์รูปภาพ (รองรับ Google Drive แบบ Full Support) ---
-        // ฟังก์ชันนี้จะดึง ID จากลิงก์ Google Drive ทุกรูปแบบ และแปลงเป็นลิงก์ Thumbnail ความละเอียดสูง
+        // ==========================================
+        // 4. Utils
+        // ==========================================
+        
         const getCleanImageUrl = (url) => {
             if (!url) return '';
             const u = url.trim();
-            
-            // ตรวจสอบว่าเป็นลิงก์ Google Drive หรือไม่ (รองรับทั้ง drive.google และ docs.google)
             if (u.includes('drive.google.com') || u.includes('docs.google.com')) {
                 let id = '';
-                
-                // Pattern 1: /file/d/XXXXX/view
                 const parts = u.split(/\/d\//);
-                if (parts.length > 1) {
-                    id = parts[1].split('/')[0];
-                }
-                
-                // Pattern 2: id=XXXXX (เช่น uc?id= หรือ open?id=)
+                if (parts.length > 1) id = parts[1].split('/')[0];
                 if (!id && u.includes('id=')) {
                     const match = u.match(/id=([a-zA-Z0-9_-]+)/);
                     if (match && match[1]) id = match[1];
                 }
-
-                // Pattern 3: Share link /folders/ หรืออื่นๆ ที่อาจจะมี ID ติดมา
                 if (!id) {
-                     // พยายามหา string ยาวๆ ที่ดูเหมือน ID
                      const match = u.match(/[-\w]{25,}/);
                      if (match) id = match[0];
                 }
-
-                if (id) {
-                    // ใช้ endpoint thumbnail?id=...&sz=w1920 เพื่อให้ได้รูปใหญ่ชัดเจนและโหลดเร็ว
-                    return `https://drive.google.com/thumbnail?id=${id}&sz=w1920`;
-                }
+                if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1920`;
             }
-            
             return u;
         };
 
-        // --- Helper สำหรับแปลงลิ้งก์ PDF ---
         const getCleanPdfUrl = (url) => {
             if (!url) return '';
             const u = url.trim();
-            // แปลงลิ้งก์ Google Drive จาก view เป็น preview เพื่อ Embed
             if (u.includes('drive.google.com')) {
+                // Ensure preview mode is used
                 return u.replace(/\/view.*/, '/preview').replace(/\/open\?id=/, '/file/d/').replace(/\/edit.*/, '/preview');
             }
             return u;
@@ -228,7 +226,9 @@
             return linkedParts.join('');
         };
 
-        // --- COMPONENTS ---
+        // ==========================================
+        // 5. Components
+        // ==========================================
 
         const Navbar = ({ setPage, logoUrl, schoolName, schoolNameEN, pages, mainMenus }) => {
             const [activeDropdown, setActiveDropdown] = useState(null);
@@ -286,7 +286,6 @@
                             className="flex items-center gap-4 cursor-pointer flex-shrink-0 relative z-20 py-2 pr-4" 
                             onClick={() => { setPage({id: 'home'}); setActiveDropdown(null); }}
                         >
-                            {/* UPDATE: ใช้ getCleanImageUrl กับ Logo */}
                             <img src={getCleanImageUrl(logoUrl) || 'https://via.placeholder.com/150?text=Logo'} className="w-14 h-14 md:w-16 md:h-16 object-contain" onError={(e)=>e.target.style.display='none'} />
                             <div className="flex flex-col justify-center">
                                 <h1 className="text-xl md:text-2xl font-bold text-primary leading-none whitespace-nowrap">{schoolName}</h1>
@@ -358,15 +357,14 @@
                 <div className="w-full max-w-[1920px] mx-auto relative aspect-[1920/800] bg-primary group overflow-hidden">
                     {displayBanners.map((b, i) => (
                         <div key={i} className={`absolute inset-0 transition-opacity duration-1000 ${i === idx ? 'opacity-100' : 'opacity-0'}`}>
-                            <div className="absolute inset-0 bg-black/30 z-10"></div>
-                            {/* UPDATE: ใช้ getCleanImageUrl */}
+                            {/* REMOVED DARK OVERLAY */}
                             <img src={getCleanImageUrl(b.ImageURL)} className={`slide-image ${i === idx ? 'slide-active' : ''}`} onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/1920x800/003366/ffffff?text=Image+Error';}} />
                         </div>
                     ))}
                     {displayBanners[idx].Caption && (
-                        <div className="absolute inset-0 z-20 flex flex-col justify-end items-center text-center p-4 pb-12">
+                        <div className="absolute inset-0 z-20 flex flex-col justify-end items-center text-center p-4 pb-12 pointer-events-none">
                             <div className="content-container">
-                                <h2 className="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-2xl tracking-tight leading-tight">{displayBanners[idx].Caption}</h2>
+                                <h2 className="text-4xl md:text-5xl font-bold text-white mb-2 drop-shadow-2xl tracking-tight leading-tight" style={{textShadow: '0 2px 4px rgba(0,0,0,0.5)'}}>{displayBanners[idx].Caption}</h2>
                             </div>
                         </div>
                     )}
@@ -434,7 +432,6 @@
                             {activeItems.map((item, idx) => (
                                 <div key={idx} className="flex-shrink-0 w-[280px] md:w-[350px] snap-center bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 group select-none">
                                     <div className="relative overflow-hidden aspect-[1414/2000]">
-                                        {/* UPDATE: ใช้ getCleanImageUrl */}
                                         <img 
                                             src={getCleanImageUrl(item.ImageURL)} 
                                             className="w-full h-full object-cover pointer-events-none transition duration-500" 
@@ -454,76 +451,115 @@
             );
         };
 
-        const NewsDetail = ({ item, onBack }) => (
-            <div className="w-full bg-white min-h-[calc(100vh-6rem)]">
-                <div className="content-container py-12 fade-in">
-                    <button onClick={onBack} className="mb-8 bg-gray-50 hover:bg-blue-50 text-[#004993] border border-blue-100 px-6 py-2.5 rounded-full flex items-center gap-2 transition font-bold shadow-sm hover:shadow-md group"><i className="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i> ย้อนกลับ</button>
-                    <div className="bg-white rounded-[2rem] shadow-xl overflow-hidden border border-gray-100">
-                        {item.PDF_URL ? (
-                            <div className="w-full h-[800px] bg-gray-100 mb-8 border-b border-gray-200">
-                                <iframe 
-                                    src={getCleanPdfUrl(item.PDF_URL)} 
-                                    className="w-full h-full"
-                                    title="PDF Viewer"
-                                    allow="autoplay"
-                                ></iframe>
-                            </div>
-                        ) : (
-                            item.ImageURL && (
-                                <div className="w-full flex justify-center bg-gray-100 py-6">
-                                    {/* UPDATE: ใช้ getCleanImageUrl */}
-                                    <img 
+        const NewsDetail = ({ item, onBack }) => {
+            const hasImage = !!item.ImageURL;
+            const hasPdf = !!item.PDF_URL;
+
+            return (
+                <div className="w-full bg-white min-h-[calc(100vh-6rem)]">
+                    <div className="content-container py-12 fade-in">
+                        <div className="bg-white rounded-[2rem] shadow-xl overflow-hidden border border-gray-100">
+                            
+                            {/* ========================================================
+                                1. IMAGE SECTION (Top if exists)
+                            ======================================================== */}
+                            {hasImage && (
+                                <div className="w-full flex justify-center bg-gray-100 border-b border-gray-100">
+                                     <img 
                                         src={getCleanImageUrl(item.ImageURL)} 
-                                        className="w-full h-auto object-cover rounded-lg shadow-md"
-                                        style={{ maxWidth: '800px', aspectRatio: '1280/720' }}
+                                        className="w-full h-auto object-cover"
+                                        style={{ maxHeight: '600px', width: 'auto', maxWidth: '100%' }}
                                         onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/1280x720?text=No+Image';}} 
                                     />
                                 </div>
-                            )
-                        )}
-                        
-                        <div className="p-12 md:p-16 max-w-5xl mx-auto">
-                            <div className="flex flex-wrap items-center gap-4 mb-8">
-                                <span className="bg-blue-50 text-[#003366] px-4 py-1.5 rounded-full text-sm font-bold shadow-sm border border-blue-100">{item.Category}</span>
-                                <span className="text-gray-500 text-sm flex items-center gap-2 font-medium"><i className="far fa-calendar-alt"></i> {new Date(item.Date).toLocaleDateString('th-TH', { dateStyle: 'long' })}</span>
+                            )}
+
+                            {/* ========================================================
+                                2. TEXT CONTENT SECTION (Middle)
+                            ======================================================== */}
+                            <div className="p-12 md:p-16 max-w-5xl mx-auto">
+                                <div className="flex flex-wrap items-center gap-4 mb-8">
+                                    <span className="bg-blue-50 text-[#003366] px-4 py-1.5 rounded-full text-sm font-bold shadow-sm border border-blue-100">{item.Category}</span>
+                                    <span className="text-gray-500 text-sm flex items-center gap-2 font-medium"><i className="far fa-calendar-alt"></i> {new Date(item.Date).toLocaleDateString('th-TH', { dateStyle: 'long' })}</span>
+                                </div>
+                                <h1 className="text-3xl md:text-4xl font-bold text-primary mb-10 leading-tight">{item.Title}</h1>
+                                <div className="prose prose-lg prose-blue max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap html-content" dangerouslySetInnerHTML={{__html: smartLinkify(item.Content)}} />
                             </div>
-                            <h1 className="text-3xl md:text-4xl font-bold text-primary mb-10 leading-tight">{item.Title}</h1>
-                            <div className="prose prose-lg prose-blue max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap html-content" dangerouslySetInnerHTML={{__html: smartLinkify(item.Content)}} />
+
+                            {/* ========================================================
+                                3. PDF SECTION (Bottom if exists)
+                            ======================================================== */}
+                            {hasPdf && (
+                                <div className="w-full bg-gray-50 border-t border-gray-200 p-8 md:p-12 flex justify-center">
+                                    <a 
+                                        href={getCleanPdfUrl(item.PDF_URL)} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="px-8 py-4 bg-[#003366] text-white rounded-xl font-bold shadow-lg hover:bg-[#004993] transition flex items-center justify-center gap-3 text-lg hover:-translate-y-1 transform duration-200"
+                                    >
+                                        <i className="fas fa-file-pdf text-2xl"></i> 
+                                        <span>เปิดเอกสารแนบ (PDF) ในหน้าต่างใหม่</span>
+                                    </a>
+                                </div>
+                            )}
+                            
                         </div>
                     </div>
                 </div>
-            </div>
-        );
+            );
+        };
 
-        const NewsCard = ({ n, onClick }) => (
-            <div onClick={onClick} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col group cursor-pointer hover:shadow-2xl hover:-translate-y-2 transition duration-300 transform">
-                <div className="h-64 overflow-hidden relative bg-gray-100">
-                     {n.PDF_URL ? (
-                        <iframe 
-                            src={getCleanPdfUrl(n.PDF_URL)} 
-                            className="w-full h-full object-cover" 
-                            style={{border:0}}
-                            loading="lazy"
-                        ></iframe>
-                     ) : (
-                         /* UPDATE: ใช้ getCleanImageUrl */
-                         <img src={getCleanImageUrl(n.ImageURL)} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/400?text=News';}} />
-                     )}
-                     
-                     <div className="absolute top-4 left-4 pointer-events-none"><span className="bg-white/95 backdrop-blur text-[#003366] text-xs font-bold px-3 py-1.5 rounded-lg shadow-md">{n.Category}</span></div>
-                </div>
-                <div className="p-8 flex-1 flex flex-col">
-                    <div className="text-xs text-gray-400 mb-3 font-medium flex items-center gap-2"><i className="far fa-clock"></i> {new Date(n.Date).toLocaleDateString('th-TH')}</div>
-                    <h3 className="font-bold text-xl mb-3 text-primary line-clamp-2 group-hover:text-[#004993] transition leading-snug">{n.Title}</h3>
-                    <p className="text-gray-500 text-sm mb-6 flex-1 leading-relaxed">
-                        {getExcerpt(n.Content, 10)}
-                    </p>
-                    <div className="pt-5 border-t border-gray-50 text-[#004993] text-sm font-bold group-hover:underline flex items-center gap-1">อ่านเพิ่มเติม <i className="fas fa-arrow-right text-xs transition-transform group-hover:translate-x-1"></i></div>
-                </div>
-            </div>
-        );
+        const NewsCard = ({ n, onClick }) => {
+            const hasImage = !!n.ImageURL;
+            const hasPdf = !!n.PDF_URL;
 
-        // --- FOOTER COMPONENT ---
+            return (
+                <div onClick={onClick} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col group cursor-pointer hover:shadow-2xl hover:-translate-y-2 transition duration-300 transform">
+                    <div className="h-64 overflow-hidden relative bg-gray-100">
+                         {/* 1. Prioritize Image if available */}
+                         {hasImage ? (
+                            <>
+                                <img 
+                                    src={getCleanImageUrl(n.ImageURL)} 
+                                    className="w-full h-full object-cover group-hover:scale-110 transition duration-700" 
+                                    onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/400?text=News';}} 
+                                />
+                                {/* 2. If PDF also exists, add overlay icon */}
+                                {hasPdf && (
+                                    <div className="absolute bottom-2 right-2 bg-red-600 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg z-10" title="มีเอกสาร PDF">
+                                        <i className="fas fa-file-pdf text-lg"></i>
+                                    </div>
+                                )}
+                            </>
+                         ) : (
+                            /* 3. Fallback: No image, but has PDF */
+                            hasPdf ? (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 flex-col">
+                                    <i className="fas fa-file-pdf text-4xl mb-2 text-red-500"></i>
+                                    <span className="text-sm font-bold">เอกสาร PDF</span>
+                                </div>
+                            ) : (
+                                /* 4. No Image, No PDF (Standard fallback) */
+                                <img src='https://via.placeholder.com/400?text=News' className="w-full h-full object-cover" />
+                            )
+                         )}
+                         
+                         <div className="absolute top-4 left-4 pointer-events-none">
+                             <span className="bg-white/95 backdrop-blur text-[#003366] text-xs font-bold px-3 py-1.5 rounded-lg shadow-md">{n.Category}</span>
+                         </div>
+                    </div>
+                    <div className="p-8 flex-1 flex flex-col">
+                        <div className="text-xs text-gray-400 mb-3 font-medium flex items-center gap-2"><i className="far fa-clock"></i> {new Date(n.Date).toLocaleDateString('th-TH')}</div>
+                        <h3 className="font-bold text-xl mb-3 text-primary line-clamp-2 group-hover:text-[#004993] transition leading-snug">{n.Title}</h3>
+                        <p className="text-gray-500 text-sm mb-6 flex-1 leading-relaxed">
+                            {getExcerpt(n.Content, 10)}
+                        </p>
+                        <div className="pt-5 border-t border-gray-50 text-[#004993] text-sm font-bold group-hover:underline flex items-center gap-1">อ่านเพิ่มเติม <i className="fas fa-arrow-right text-xs transition-transform group-hover:translate-x-1"></i></div>
+                    </div>
+                </div>
+            );
+        };
+
         const Footer = ({ schoolName, schoolNameEN, schoolAddress, schoolPhone, fbName, fbUrl, logoUrl, onAdminClick }) => {
             return (
                 <footer className="bg-primary text-white pt-16 pb-8 mt-auto">
@@ -531,7 +567,6 @@
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
                             <div className="md:col-span-1">
                                 <div className="flex items-center gap-4 mb-6">
-                                    {/* UPDATE: ใช้ getCleanImageUrl */}
                                     <img src={getCleanImageUrl(logoUrl)} className="w-14 h-14 bg-white rounded-full p-1 object-contain" onError={(e)=>e.target.style.display='none'}/>
                                     <div>
                                         <h3 className="font-bold text-xl leading-tight">{schoolName}</h3>
@@ -637,9 +672,9 @@
             const imageHints = {
                 'Banners': 'แนะนำ 1920 x 800 px (แนวนอน)',
                 'Newsletters': 'แนะนำ 1414 x 2000 px (แนวตั้ง A4)',
-                'News': 'แนะนำ 1280 x 720 px (แนวนอน 16:9)',
+                'News': 'แนะนำ 2000 x 1414 px (แนวนอน A4) หรือตามความเหมาะสม',
                 'Personnel': 'แนะนำ 500 x 500 px (สี่เหลี่ยมจัตุรัส)',
-                'Pages': 'แนะนำ 1280 x 720 px หรือตามความเหมาะสม',
+                'Pages': 'แนะนำ 2000 x 1414 px (แนวนอน A4) หรือตามความเหมาะสม',
                 'Menus': 'แนะนำ 1280 x 720 px (สำหรับ Header หน้า Page)'
             };
 
@@ -874,7 +909,6 @@
                                                     <label className="text-sm font-bold text-gray-600 mb-1 block">URL รูปภาพโลโก้ <span className="text-blue-500 font-normal text-xs ml-1">(แนะนำ 512x512 px หรือลิ้งก์ Google Drive)</span></label>
                                                     <input className="w-full border p-3 rounded-lg bg-gray-50" value={settingsForm.SchoolLogo} onChange={e=>setSettingsForm({...settingsForm, SchoolLogo: e.target.value})} />
                                                     {settingsForm.SchoolLogo && (
-                                                        /* UPDATE: ใช้ getCleanImageUrl ใน Preview Admin */
                                                         <img src={getCleanImageUrl(settingsForm.SchoolLogo)} className="h-16 mt-2 border p-1 rounded" onError={(e)=>e.target.style.display='none'}/>
                                                     )}
                                                 </div>
@@ -962,7 +996,6 @@
                                 {tab === 'Pages' ? (Object.entries(getGroupedPages()).map(([key, group]) => (group.items.length > 0 && (<div key={key} className="bg-white rounded-xl border border-gray-200 overflow-hidden"><div className="bg-gray-100 px-5 py-3 font-bold text-gray-700 border-b flex justify-between"><span>{group.label}</span><span className="text-xs bg-gray-200 px-2 py-1 rounded text-gray-500">{group.items.length} รายการ</span></div><div className="divide-y">{group.items.map((item, i) => (<div key={i} className="p-4 flex justify-between items-center hover:bg-blue-50 transition"><div className="font-bold text-slate-800">{item.Title}</div><div className="flex items-center gap-2"><button onClick={()=>handleEdit(item)} className="text-blue-500 hover:text-blue-700 px-2"><i className="fas fa-edit fa-lg"></i></button><button onClick={()=>handleDelete(item.PageKey)} className="text-red-500 hover:text-red-700 px-2"><i className="fas fa-trash fa-lg"></i></button></div></div>))}</div></div>)))) 
                                 : 
                                 (<div className="grid gap-3">{getSortedAdminData(data[tab]).map((item,i) => (<div key={i} className="bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center hover:shadow-md transition"><div className="flex items-center gap-4">{item.ImageURL && 
-                                    /* UPDATE: ใช้ getCleanImageUrl ใน Preview Admin List */
                                     <img src={getCleanImageUrl(item.ImageURL.split(',')[0])} className="w-12 h-12 rounded-lg object-cover bg-gray-100" />}<div><div className="font-bold">{item.Title || item.Name || item.Caption || item.Label}</div><div className="text-xs text-gray-400">{item.Order ? `ลำดับ: ${item.Order} | ` : ''}{item.Category || item.MenuCategory || item.PageKey}</div></div></div><div className="flex items-center gap-2"><button onClick={()=>handleEdit(item)} className="text-blue-500 hover:text-blue-700 px-2"><i className="fas fa-edit fa-lg"></i></button><button onClick={()=>handleDelete(item.ID || item.PageKey)} className="text-red-500 hover:text-red-700 px-2"><i className="fas fa-trash fa-lg"></i></button></div></div>))}</div>)}
                             </div>
                             )}
@@ -973,57 +1006,57 @@
         };
 
         const App = () => {
-            const [page, setPage] = useState(() => {
-                try {
-                    const saved = sessionStorage.getItem('phukham_page_state');
-                    return saved ? JSON.parse(saved) : { id: 'home' };
-                } catch (e) {
-                    return { id: 'home' };
+            // UPDATE: Initialize state from URL logic primarily, fallback to 'home'
+            const [page, _setPage] = useState(() => {
+                const params = new URLSearchParams(window.location.search);
+                const pId = params.get('page');
+                const key = params.get('key');
+                if (pId) {
+                    return { id: pId, key: key };
                 }
+                return { id: 'home' };
             });
 
-            // --- HISTORY NAVIGATION LOGIC ADDED HERE ---
-            const isPopping = useRef(false);
+            // UPDATE: Wrapper function to handle history pushState
+            const setPage = (newPage) => {
+                _setPage(newPage);
+                const params = new URLSearchParams();
+                if (newPage.id) params.set('page', newPage.id);
+                if (newPage.key) params.set('key', newPage.key);
+                
+                // Construct new URL
+                const newUrl = `${window.location.pathname}?${params.toString()}`;
+                
+                // Push state to history. We store the full object 'newPage' in state
+                // so we can retrieve complex data (like 'item') when user clicks Back.
+                window.history.pushState(newPage, '', newUrl);
+            };
 
+            // UPDATE: Effect to handle Browser Back/Forward buttons
             useEffect(() => {
-                // Handle Browser Back/Forward buttons
-                const onPopState = (e) => {
-                    if (e.state) {
-                        isPopping.current = true;
-                        setPage(e.state);
+                const onPopState = (event) => {
+                    if (event.state) {
+                        _setPage(event.state);
+                    } else {
+                        // Fallback parsing if state is empty (e.g. manual URL change)
+                        const params = new URLSearchParams(window.location.search);
+                        const pId = params.get('page') || 'home';
+                        const key = params.get('key');
+                        _setPage({ id: pId, key: key });
                     }
                 };
                 window.addEventListener('popstate', onPopState);
-
-                // Set initial state to history if empty (fix for reload)
-                if (!window.history.state) {
-                    const url = new URL(window.location);
-                    url.searchParams.set('page', page.id);
-                    if(page.key) url.searchParams.set('key', page.key);
-                    window.history.replaceState(page, '', url);
-                }
-
                 return () => window.removeEventListener('popstate', onPopState);
             }, []);
 
+            // === UPDATE: SCROLL TO TOP ON PAGE CHANGE & REFRESH ===
             useEffect(() => {
-                // Sync State -> URL
-                if (isPopping.current) {
-                    isPopping.current = false;
-                    return;
+                // Prevent browser from restoring scroll position on refresh
+                if ('scrollRestoration' in window.history) {
+                    window.history.scrollRestoration = 'manual';
                 }
-
-                const url = new URL(window.location);
-                url.searchParams.set('page', page.id);
-                if (page.key) url.searchParams.set('key', page.key);
-                else url.searchParams.delete('key');
-                
-                // Compare state to avoid duplicate push
-                if (JSON.stringify(window.history.state) !== JSON.stringify(page)) {
-                    window.history.pushState(page, '', url);
-                }
+                window.scrollTo(0, 0);
             }, [page]);
-            // ------------------------------------------
 
             const [data, setData] = useState(null);
             const [isAdmin, setIsAdmin] = useState(false);
@@ -1031,9 +1064,10 @@
             const [user, setUser] = useState('');
             const [pass, setPass] = useState('');
 
-            useEffect(() => {
-                sessionStorage.setItem('phukham_page_state', JSON.stringify(page));
-            }, [page]);
+            // UPDATE: Removed session storage sync for page state as we now use URL/History API
+            // useEffect(() => {
+            //     sessionStorage.setItem('phukham_page_state', JSON.stringify(page));
+            // }, [page]);
 
             const load = async () => {
                 const cached = localStorage.getItem('phukhamData');
@@ -1122,7 +1156,10 @@
                                     </>
                                 )}
                                 {page.id === 'news' && <div className="content-container py-12"><h2 className="text-3xl font-bold text-center mb-10 text-primary">ข่าวสารทั้งหมด</h2><div className="grid md:grid-cols-3 gap-8">{sortedNews.map((n,i)=>(<NewsCard key={i} n={n} onClick={()=>setPage({id:'news_detail', item: n})} />))}</div></div>}
-                                {page.id === 'news_detail' && <NewsDetail item={page.item} onBack={()=>setPage({id: 'news'})} />}
+                                {page.id === 'news_detail' && page.item && <NewsDetail item={page.item} onBack={()=>setPage({id: 'news'})} />}
+                                {/* Fallback if direct link to detail without item data (safeguard) */}
+                                {page.id === 'news_detail' && !page.item && <div className="p-12 text-center text-gray-500">กำลังโหลดข้อมูล หรือไม่พบข้อมูลข่าว... (กรุณากลับไปหน้าข่าวประชาสัมพันธ์)</div>}
+
                                 {page.id === 'page' && <div className="content-container py-12"><div className="bg-white p-12 rounded-3xl shadow-lg border border-gray-100 fade-in min-h-[600px]">{(() => { const p = data.Pages.find(x => x.PageKey === page.key) || {}; 
                                     const pageImages = p.ImageURL ? p.ImageURL.split(',').map(url => url.trim()).filter(url => url) : [];
                                     return (
@@ -1132,7 +1169,6 @@
                                             {pageImages.length > 0 && (
                                                 <div className="mt-10 flex flex-col items-center">
                                                     {pageImages.map((imgUrl, idx) => (
-                                                        /* UPDATE: ใช้ getCleanImageUrl */
                                                         <img 
                                                             key={idx}
                                                             src={getCleanImageUrl(imgUrl)} 
@@ -1146,7 +1182,6 @@
                                     ); 
                                 })()}</div></div>}
                                 {page.id === 'personnel' && <div className="content-container py-12"><h2 className="text-3xl font-bold text-center mb-12 text-primary">บุคลากร</h2><div className="grid grid-cols-1 md:grid-cols-4 gap-8">{sortedPersonnel.map((p,i)=>(<div key={i} className="bg-white p-8 rounded-2xl shadow-sm text-center border hover:shadow-xl transition transform hover:-translate-y-2">
-                                {/* UPDATE: ใช้ getCleanImageUrl */}
                                 <img src={getCleanImageUrl(p.ImageURL)} className="w-32 h-32 mx-auto rounded-full object-cover mb-4 shadow-md border-4 border-white" onError={(e)=>e.target.src='https://via.placeholder.com/150'} /><h4 className="font-bold text-xl text-primary">{p.Name}</h4><p className="text-slate-500 text-sm font-medium mt-1">{p.Position}</p><span className="text-xs text-primary bg-blue-50 px-3 py-1 rounded-full mt-3 inline-block font-semibold">{p.Group}</span></div>))}</div></div>}
                             </main>
                             
@@ -1173,4 +1208,5 @@
     </script>
 </body>
 </html>
+
 
