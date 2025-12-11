@@ -12,7 +12,6 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- MODIFIED: รับค่า Parameters จาก Backend -->
     <script>
       // รับค่า urlParams ที่ส่งมาจาก Code.gs (ถ้าไม่มีให้เป็น object ว่าง)
       window.INITIAL_PARAMS = JSON.parse(<?!= urlParams || '{}' ?>);
@@ -952,14 +951,11 @@
 
         const App = () => {
             const [page, setPage] = useState(() => {
-                // MODIFIED: ตรวจสอบ URL Parameters (Deep Link) เป็นอันดับแรก
                 if (window.INITIAL_PARAMS && window.INITIAL_PARAMS.page) {
                      const p = window.INITIAL_PARAMS.page;
-                     // กรณีเป็นหน้า Page แบบ Dynamic (เช่น ?page=page&key=page_history)
                      if (p === 'page' && window.INITIAL_PARAMS.key) {
                          return { id: 'page', key: window.INITIAL_PARAMS.key };
                      }
-                     // กรณีเป็นเมนูหลัก (เช่น ?page=news, ?page=personnel)
                      return { id: p };
                 }
 
@@ -971,15 +967,50 @@
                 }
             });
 
+            // MODIFIED: Ref สำหรับป้องกัน Loop ของ History state
+            const isPopping = useRef(false);
+
+            // MODIFIED: เมื่อ state 'page' เปลี่ยน -> ให้ push history (ถ้าไม่ได้มาจากการกด back)
+            useEffect(() => {
+                if (isPopping.current) {
+                    isPopping.current = false;
+                    return;
+                }
+                
+                // สร้าง Query String เพื่อความสวยงามและรองรับ Copy URL
+                const params = new URLSearchParams();
+                params.set('page', page.id);
+                if (page.key) params.set('key', page.key);
+                
+                // เก็บ state ลง history (รวมถึง item object ถ้ามี)
+                const url = `${window.location.pathname}?${params.toString()}`;
+                window.history.pushState(page, '', url); 
+
+                sessionStorage.setItem('phukham_page_state', JSON.stringify(page));
+            }, [page]);
+
+            // MODIFIED: ฟัง Event 'popstate' (กด Back/Forward)
+            useEffect(() => {
+                const handlePop = (e) => {
+                    if (e.state) {
+                        isPopping.current = true;
+                        setPage(e.state);
+                    } else {
+                        // กรณีไม่มี state (เช่น ย้อนกลับไปหน้าแรกสุดที่เข้ามา)
+                        isPopping.current = true;
+                        setPage({ id: 'home' });
+                    }
+                };
+
+                window.addEventListener('popstate', handlePop);
+                return () => window.removeEventListener('popstate', handlePop);
+            }, []);
+
             const [data, setData] = useState(null);
             const [isAdmin, setIsAdmin] = useState(false);
             const [showLogin, setShowLogin] = useState(false);
             const [user, setUser] = useState('');
             const [pass, setPass] = useState('');
-
-            useEffect(() => {
-                sessionStorage.setItem('phukham_page_state', JSON.stringify(page));
-            }, [page]);
 
             const load = async () => {
                 const cached = localStorage.getItem('phukhamData');
@@ -1117,4 +1148,5 @@
     </script>
 </body>
 </html>
+
 
