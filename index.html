@@ -625,26 +625,10 @@
             );
         };
 
-        const AdminPanel = ({ data, reload, onLogout, role }) => {
-            // *** ROLE BASED TAB CONFIGURATION ***
-            const isSuperAdmin = String(role).toLowerCase() === 'superadmin';
-            
-            // Define allowed tabs for each role
-            const allowedTabs = isSuperAdmin 
-                ? ['News', 'Newsletters', 'Personnel', 'Banners', 'Pages', 'Menus', 'Settings'] 
-                : ['News', 'Newsletters', 'Banners'];
-
+        const AdminPanel = ({ data, reload, onLogout }) => {
             const [tab, setTab] = useState(() => {
-                const saved = sessionStorage.getItem('phukham_admin_tab');
-                return (saved && allowedTabs.includes(saved)) ? saved : allowedTabs[0];
+                return sessionStorage.getItem('phukham_admin_tab') || 'News';
             });
-
-            // Prevent unauthorized tab access if state mismatches
-            useEffect(() => {
-                if (!allowedTabs.includes(tab)) {
-                    setTab(allowedTabs[0]);
-                }
-            }, [tab, allowedTabs]);
 
             useEffect(() => {
                 sessionStorage.setItem('phukham_admin_tab', tab);
@@ -879,38 +863,17 @@
                 const linkHtml = `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline;">${text || url}</a>`;
                 setForm(prev => ({ ...prev, [fieldName]: (prev[fieldName] || "") + " " + linkHtml }));
             };
-            
-            // Separator logic for Sidebar
-            const mainTabs = allowedTabs.filter(t => !['Menus', 'Settings'].includes(t));
-            const systemTabs = allowedTabs.filter(t => ['Menus', 'Settings'].includes(t));
 
             return (
                 <div className="fixed inset-0 bg-slate-50 z-[200] flex flex-col text-slate-800 font-sarabun text-base">
                     <header className="bg-white px-6 py-4 flex justify-between items-center shadow-sm z-10 border-b">
-                        <div className="flex items-center gap-2">
-                            <div className="bg-primary text-white w-8 h-8 rounded flex items-center justify-center"><i className="fas fa-cog"></i></div>
-                            <div>
-                                <h2 className="font-bold text-lg text-primary">ระบบจัดการหลังบ้าน</h2>
-                                <p className="text-xs text-gray-500">สถานะ: {role}</p>
-                            </div>
-                        </div>
+                        <div className="flex items-center gap-2"><div className="bg-primary text-white w-8 h-8 rounded flex items-center justify-center"><i className="fas fa-cog"></i></div><h2 className="font-bold text-lg text-primary">ระบบจัดการหลังบ้าน</h2></div>
                         <button onClick={onLogout} className="text-red-500 hover:text-red-700 text-sm font-bold"><i className="fas fa-sign-out-alt"></i> ออกจากระบบ</button>
                     </header>
                     <div className="flex flex-1 overflow-hidden">
                         <aside className="w-64 bg-white border-r hidden md:block p-4 space-y-1 overflow-y-auto">
-                            {/* Main Tabs */}
-                            {mainTabs.map(t => (
-                                <button key={t} onClick={()=>{setTab(t); setEditItem(null); setForm({});}} className={`w-full text-left px-4 py-3 rounded-lg text-sm transition ${tab===t ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs[t]}</button>
-                            ))}
-                            
-                            {/* System Tabs (Only if allowed) */}
-                            {systemTabs.length > 0 && (
-                                <div className="border-t my-2 pt-2">
-                                    {systemTabs.map(t => (
-                                        <button key={t} onClick={()=>{setTab(t); if(t==='Settings') openSettings(); else {setEditItem(null); setForm({});}}} className={`w-full text-left px-4 py-2 rounded-lg text-sm transition ${tab===t ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs[t]}</button>
-                                    ))}
-                                </div>
-                            )}
+                            {['News', 'Newsletters', 'Personnel', 'Banners', 'Pages'].map(t => (<button key={t} onClick={()=>{setTab(t); setEditItem(null); setForm({});}} className={`w-full text-left px-4 py-3 rounded-lg text-sm transition ${tab===t ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs[t]}</button>))}
+                            <div className="border-t my-2 pt-2"><button onClick={()=>{setTab('Menus'); setEditItem(null); setForm({});}} className={`w-full text-left px-4 py-2 rounded-lg text-sm transition ${tab==='Menus' ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs['Menus']}</button><button onClick={()=>{setTab('Settings'); openSettings();}} className={`w-full text-left px-4 py-2 rounded-lg text-sm transition ${tab==='Settings' ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs['Settings']}</button></div>
                         </aside>
                         <main className="flex-1 p-8 overflow-auto">
                             <h2 className="text-2xl font-bold mb-4 text-primary">{menuTabs[tab]}</h2>
@@ -1097,8 +1060,6 @@
 
             const [data, setData] = useState(null);
             const [isAdmin, setIsAdmin] = useState(false);
-            const [userRole, setUserRole] = useState(''); // NEW STATE
-            
             const [showLogin, setShowLogin] = useState(false);
             const [user, setUser] = useState('');
             const [pass, setPass] = useState('');
@@ -1123,33 +1084,32 @@
             useEffect(() => { 
                 load();
                 const adminSession = sessionStorage.getItem('phukham_admin_session');
-                const roleSession = sessionStorage.getItem('phukham_admin_role');
                 if (adminSession === 'true') {
                     setIsAdmin(true);
-                    setUserRole(roleSession || '');
                 }
             }, []);
 
             const handleLogin = async (e) => { 
                 e.preventDefault(); 
+                
+                // 1. ตรวจสอบช่องว่าง (Client-side validation)
+                if (!user.trim() || !pass.trim()) {
+                    alert('กรุณากรอกข้อมูล');
+                    return;
+                }
+
                 setIsLoggingIn(true);
                 try {
                     const res = await api.post({ action: 'login', username: user, password: pass }); 
                     if(res.success) { 
-                        setIsAdmin(true);
-                        setUserRole(res.role); // Set role
+                        setIsAdmin(true); 
                         setShowLogin(false); 
                         sessionStorage.setItem('phukham_admin_session', 'true');
-                        sessionStorage.setItem('phukham_admin_role', res.role); // Save role
+                        setUser(''); 
+                        setPass('');
                     } else { 
-                        // *** UPDATE: แสดงข้อความแยกตามเหตุผล ***
-                        if (res.reason === 'user_not_found') {
-                            alert('ไม่พบข้อมูลผู้ใช้');
-                        } else if (res.reason === 'wrong_password') {
-                            alert('รหัสผ่านไม่ถูกต้อง');
-                        } else {
-                            alert('การเข้าสู่ระบบล้มเหลว');
-                        }
+                        // 2. แสดงข้อความผิดพลาดจาก Backend ('ไม่พบข้อมูลผู้ใช้' หรือ 'รหัสผ่านไม่ถูกต้อง')
+                        alert(res.message || 'รหัสผิดพลาด'); 
                     } 
                 } catch(e) {
                     alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
@@ -1161,9 +1121,7 @@
             const handleLogout = () => {
                 if(confirm('ต้องการออกจากระบบ?')) {
                     setIsAdmin(false);
-                    setUserRole('');
                     sessionStorage.removeItem('phukham_admin_session');
-                    sessionStorage.removeItem('phukham_admin_role');
                 }
             };
 
@@ -1187,7 +1145,7 @@
 
             return (
                 <div className="min-h-screen flex flex-col font-sarabun bg-slate-50 relative w-full">
-                    {isAdmin ? <AdminPanel data={data} reload={load} onLogout={handleLogout} role={userRole} /> : (
+                    {isAdmin ? <AdminPanel data={data} reload={load} onLogout={handleLogout} onClose={()=>handleLogout()} /> : (
                         <>
                             <Navbar setPage={setPage} logoUrl={logoUrl} schoolName={schoolName} schoolNameEN={schoolNameEN} pages={data.Pages} mainMenus={data.Menus} />
                             <main className="flex-grow w-full bg-white">
@@ -1301,5 +1259,4 @@
     </script>
 </body>
 </html>
-
 
