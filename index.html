@@ -456,12 +456,6 @@
             const hasPdf = !!item.PDF_URL;
             const hasLink = !!item.Link_URL;
 
-            // UPDATE: Parse Multiple Attachments and Links
-            let multiAttachments = [];
-            let multiLinks = [];
-            try { multiAttachments = JSON.parse(item.Multi_Attachments || '[]'); } catch(e) {}
-            try { multiLinks = JSON.parse(item.Multi_Links || '[]'); } catch(e) {}
-
             return (
                 <div className="w-full bg-white min-h-[calc(100vh-6rem)]">
                     <div className="content-container py-12 fade-in">
@@ -496,69 +490,30 @@
                             {/* ========================================================
                                 3. ATTACHMENT SECTION (PDF & Links)
                             ======================================================== */}
-                            {(hasPdf || hasLink || multiAttachments.length > 0 || multiLinks.length > 0) && (
-                                <div className="w-full bg-gray-50 border-t border-gray-200 p-8 md:p-12">
-                                    {/* REMOVED HEADER AS REQUESTED */}
-                                    <div className="flex flex-col gap-4 max-w-3xl mx-auto">
-                                        {/* Original Single PDF */}
-                                        {hasPdf && (
-                                            <a 
-                                                href={getCleanPdfUrl(item.PDF_URL)} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="px-8 py-4 bg-[#DC2626] text-white rounded-xl font-bold shadow-lg hover:bg-[#C62323] transition flex items-center justify-center gap-3 text-lg hover:-translate-y-1 transform duration-200"
-                                            >
-                                                <i className="fas fa-file-pdf text-2xl"></i> 
-                                                <span>เปิดเอกสารแนบ (PDF)</span>
-                                            </a>
-                                        )}
-                                        
-                                        {/* Multi PDFs */}
-                                        {multiAttachments.map((f, idx) => (
-                                            f.url && (
-                                            <a 
-                                                key={`pdf-${idx}`}
-                                                href={getCleanPdfUrl(f.url)} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="px-8 py-4 bg-[#DC2626] text-white rounded-xl font-bold shadow-lg hover:bg-[#C62323] transition flex items-center justify-center gap-3 text-lg hover:-translate-y-1 transform duration-200"
-                                            >
-                                                <i className="fas fa-file-pdf text-2xl"></i> 
-                                                <span>{f.name || `เอกสารแนบ ${idx+1}`}</span>
-                                            </a>
-                                            )
-                                        ))}
-
-                                        {/* Original Single Link */}
-                                        {hasLink && (
-                                            <a 
-                                                href={item.Link_URL} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="px-8 py-4 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-3 text-lg hover:-translate-y-1 transform duration-200"
-                                            >
-                                                <i className="fas fa-external-link-alt text-2xl"></i> 
-                                                <span>{item.Link_Label || 'ไปที่ลิงก์'}</span>
-                                            </a>
-                                        )}
-
-                                        {/* Multi Links */}
-                                        {multiLinks.map((l, idx) => (
-                                            l.url && (
-                                            <a 
-                                                key={`link-${idx}`}
-                                                href={l.url} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="px-8 py-4 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-3 text-lg hover:-translate-y-1 transform duration-200"
-                                            >
-                                                <i className="fas fa-external-link-alt text-2xl"></i> 
-                                                {/* Ensure LABEL is shown, fallback to default text if empty */}
-                                                <span>{l.label || `ลิงก์ที่เกี่ยวข้อง ${idx+1}`}</span>
-                                            </a>
-                                            )
-                                        ))}
-                                    </div>
+                            {(hasPdf || hasLink) && (
+                                <div className="w-full bg-gray-50 border-t border-gray-200 p-8 md:p-12 flex flex-col md:flex-row justify-center gap-4">
+                                    {hasPdf && (
+                                        <a 
+                                            href={getCleanPdfUrl(item.PDF_URL)} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="px-8 py-4 bg-[#DC2626] text-white rounded-xl font-bold shadow-lg hover:bg-[#C62323] transition flex items-center justify-center gap-3 text-lg hover:-translate-y-1 transform duration-200"
+                                        >
+                                            <i className="fas fa-file-pdf text-2xl"></i> 
+                                            <span>เปิดเอกสารแนบ (PDF)</span>
+                                        </a>
+                                    )}
+                                    {hasLink && (
+                                        <a 
+                                            href={item.Link_URL} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="px-8 py-4 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-3 text-lg hover:-translate-y-1 transform duration-200"
+                                        >
+                                            <i className="fas fa-external-link-alt text-2xl"></i> 
+                                            <span>{item.Link_Label || 'ไปที่ลิงก์'}</span>
+                                        </a>
+                                    )}
                                 </div>
                             )}
                             
@@ -568,13 +523,14 @@
             );
         };
 
-        const NewsCard = ({ n, onClick }) => {
+        // UPDATE: Added 'fallback' prop
+        const NewsCard = ({ n, onClick, fallback }) => {
             const hasImage = !!n.ImageURL;
             const hasPdf = !!n.PDF_URL;
 
             return (
                 <div onClick={onClick} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col group cursor-pointer hover:shadow-2xl hover:-translate-y-2 transition duration-300 transform">
-                    {/* CHANGED: If no image and no PDF, show white background instead of placeholder */}
+                    {/* CHANGED: If no image and no PDF, show Image from Bannersnews instead of white background */}
                     <div className="aspect-[16/9] w-full overflow-hidden relative bg-gray-100">
                          {/* 1. Prioritize Image if available */}
                          {hasImage ? (
@@ -599,8 +555,16 @@
                                     <span className="text-sm font-bold">เอกสาร PDF</span>
                                 </div>
                             ) : (
-                                /* 4. No Image, No PDF (Standard fallback) -> Show White Background */
-                                <div className="w-full h-full bg-white"></div>
+                                /* 4. No Image, No PDF -> Show Fallback Banner from Bannersnews */
+                                fallback ? (
+                                    <img 
+                                        src={getCleanImageUrl(fallback)} 
+                                        className="w-full h-full object-cover group-hover:scale-110 transition duration-700" 
+                                        onError={(e)=>{e.target.style.display='none';}} 
+                                    />
+                                ) : (
+                                    <div className="w-full h-full bg-white"></div>
+                                )
                             )
                          )}
                          
@@ -708,6 +672,7 @@
                 FacebookURL: ''
             });
 
+            // UPDATE: Added 'Banners' mapping
             const labelMap = { 
                 'Title': 'หัวข้อ / ชื่อ', 
                 'Content': 'เนื้อหา (HTML/Embed)', 
@@ -728,19 +693,19 @@
                 'PageKey': 'รหัสหน้า', 
                 'MenuCategory': 'แสดงในเมนูหลัก', 
                 'Order': 'ลำดับการแสดงผล',
-                'Multi_Attachments': 'ไฟล์แนบเพิ่มเติม',
-                'Multi_Links': 'ลิงก์เพิ่มเติม'
+                'Banners': 'รูปภาพ (URL)'
             };
             const getLabel = (key) => labelMap[key] || key;
             
+            // UPDATE: Added 'Bannersnews' hint
             const imageHints = {
                 'Banners': 'แนะนำ 1920 x 800 px (แนวนอน)',
                 'Newsletters': 'แนะนำ 1414 x 2000 px (แนวตั้ง A4)',
-                // CHANGED: Update hint to 1920 x 1080 px
                 'News': 'แนะนำ 1920 x 1080 px (16:9) หรือตามความเหมาะสม',
                 'Personnel': 'แนะนำ 500 x 500 px (สี่เหลี่ยมจัตุรัส)',
                 'Pages': 'แนะนำ 2000 x 1414 px (แนวนอน A4) หรือตามความเหมาะสม',
-                'Menus': 'แนะนำ 1280 x 720 px (สำหรับ Header หน้า Page)'
+                'Menus': 'แนะนำ 1280 x 720 px (สำหรับ Header หน้า Page)',
+                'Bannersnews': 'แนะนำ 1920 x 1080 px (ใช้เมื่อข่าวไม่มีรูป)'
             };
 
             const handleAddNew = () => {
@@ -882,7 +847,17 @@
                 setEditItem({ settings: true }); 
             }
             
-            const menuTabs = { 'News':'ข่าวประชาสัมพันธ์', 'Newsletters': 'จดหมายข่าว', 'Personnel':'บุคลากร', 'Banners':'สไลด์', 'Pages':'เนื้อหาหน้าย่อย', 'Menus':'เมนูหลัก', 'Settings':'ระบบ' };
+            // UPDATE: Added 'Bannersnews' to tabs
+            const menuTabs = { 
+                'News':'ข่าวประชาสัมพันธ์', 
+                'Newsletters': 'จดหมายข่าว', 
+                'Personnel':'บุคลากร', 
+                'Banners':'สไลด์', 
+                'Bannersnews': 'ภาพข่าวสำรอง',
+                'Pages':'เนื้อหาหน้าย่อย', 
+                'Menus':'เมนูหลัก', 
+                'Settings':'ระบบ' 
+            };
             
             const getGroupedPages = () => { 
                 if (tab !== 'Pages') return null; 
@@ -928,29 +903,6 @@
                 setForm(prev => ({ ...prev, [fieldName]: (prev[fieldName] || "") + " " + linkHtml }));
             };
 
-            // === UPDATE: Helper for managing multi-field JSON arrays ===
-            const handleMultiListChange = (field, index, subField, value) => {
-                let list = [];
-                try { list = JSON.parse(form[field] || '[]'); } catch(e) {}
-                if(!list[index]) list[index] = {};
-                list[index][subField] = value;
-                setForm({...form, [field]: JSON.stringify(list)});
-            };
-            
-            const addMultiListItem = (field) => {
-                let list = [];
-                try { list = JSON.parse(form[field] || '[]'); } catch(e) {}
-                list.push({ name: '', url: '', label: '' }); // Generic structure
-                setForm({...form, [field]: JSON.stringify(list)});
-            };
-
-            const removeMultiListItem = (field, index) => {
-                let list = [];
-                try { list = JSON.parse(form[field] || '[]'); } catch(e) {}
-                list.splice(index, 1);
-                setForm({...form, [field]: JSON.stringify(list)});
-            };
-
             return (
                 <div className="fixed inset-0 bg-slate-50 z-[200] flex flex-col text-slate-800 font-sarabun text-base">
                     <header className="bg-white px-6 py-4 flex justify-between items-center shadow-sm z-10 border-b">
@@ -959,7 +911,7 @@
                     </header>
                     <div className="flex flex-1 overflow-hidden">
                         <aside className="w-64 bg-white border-r hidden md:block p-4 space-y-1 overflow-y-auto">
-                            {['News', 'Newsletters', 'Personnel', 'Banners', 'Pages'].map(t => (<button key={t} onClick={()=>{setTab(t); setEditItem(null); setForm({});}} className={`w-full text-left px-4 py-3 rounded-lg text-sm transition ${tab===t ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs[t]}</button>))}
+                            {['News', 'Newsletters', 'Personnel', 'Banners', 'Bannersnews', 'Pages'].map(t => (<button key={t} onClick={()=>{setTab(t); setEditItem(null); setForm({});}} className={`w-full text-left px-4 py-3 rounded-lg text-sm transition ${tab===t ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs[t]}</button>))}
                             <div className="border-t my-2 pt-2"><button onClick={()=>{setTab('Menus'); setEditItem(null); setForm({});}} className={`w-full text-left px-4 py-2 rounded-lg text-sm transition ${tab==='Menus' ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs['Menus']}</button><button onClick={()=>{setTab('Settings'); openSettings();}} className={`w-full text-left px-4 py-2 rounded-lg text-sm transition ${tab==='Settings' ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs['Settings']}</button></div>
                         </aside>
                         <main className="flex-1 p-8 overflow-auto">
@@ -1062,40 +1014,6 @@
                                                     </div>
                                                 </div>
 
-                                                {/* === UPDATE: Multi Attachments === */}
-                                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <label className="text-sm font-bold text-gray-600">ไฟล์แนบเพิ่มเติม (PDF)</label>
-                                                        <button type="button" onClick={() => addMultiListItem('Multi_Attachments')} className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 font-bold"><i className="fas fa-plus"></i> เพิ่มไฟล์</button>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        {(form.Multi_Attachments ? JSON.parse(form.Multi_Attachments) : []).map((f, i) => (
-                                                            <div key={i} className="flex gap-2">
-                                                                <input className="flex-1 border p-2 rounded text-sm" placeholder="ชื่อไฟล์" value={f.name||''} onChange={e=>handleMultiListChange('Multi_Attachments', i, 'name', e.target.value)} />
-                                                                <input className="flex-1 border p-2 rounded text-sm" placeholder="URL (Google Drive)" value={f.url||''} onChange={e=>handleMultiListChange('Multi_Attachments', i, 'url', e.target.value)} />
-                                                                <button type="button" onClick={() => removeMultiListItem('Multi_Attachments', i)} className="text-red-500 hover:text-red-700 px-2"><i className="fas fa-trash"></i></button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* === UPDATE: Multi Links === */}
-                                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <label className="text-sm font-bold text-gray-600">ลิงก์เพิ่มเติม (External)</label>
-                                                        <button type="button" onClick={() => addMultiListItem('Multi_Links')} className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 font-bold"><i className="fas fa-plus"></i> เพิ่มลิงก์</button>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        {(form.Multi_Links ? JSON.parse(form.Multi_Links) : []).map((l, i) => (
-                                                            <div key={i} className="flex gap-2">
-                                                                <input className="flex-1 border p-2 rounded text-sm" placeholder="ข้อความปุ่ม" value={l.label||''} onChange={e=>handleMultiListChange('Multi_Links', i, 'label', e.target.value)} />
-                                                                <input className="flex-1 border p-2 rounded text-sm" placeholder="URL (https://...)" value={l.url||''} onChange={e=>handleMultiListChange('Multi_Links', i, 'url', e.target.value)} />
-                                                                <button type="button" onClick={() => removeMultiListItem('Multi_Links', i)} className="text-red-500 hover:text-red-700 px-2"><i className="fas fa-trash"></i></button>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
                                                 <div><div className="flex justify-between items-center mb-1"><label className="text-sm font-bold text-gray-600 block">เนื้อหา</label><button type="button" onClick={() => insertLinkToContent('Content')} className="text-xs bg-blue-50 text-blue-600 border border-blue-200 px-2 py-1 rounded hover:bg-blue-100 font-bold flex items-center gap-1"><i className="fas fa-link"></i> แทรกลิ้งก์</button></div><textarea className="w-full border p-3 rounded-lg h-48 font-mono text-sm" value={form.Content||''} onChange={e=>setForm({...form, Content: e.target.value})} placeholder="ใส่เนื้อหาข่าว หรือ HTML..."></textarea></div>
                                             </>}
                                             {tab === 'Newsletters' && (<div><label className="text-sm font-bold text-gray-600 mb-1 block">หัวข้อจดหมายข่าว</label><input className="w-full border p-3 rounded-lg" value={form.Title||''} onChange={e=>setForm({...form, Title: e.target.value})} placeholder="ใส่ชื่อจดหมายข่าว" /></div>)}
@@ -1114,10 +1032,10 @@
                                             </>} 
                                             
                                             {Object.keys(tab === 'Settings' ? {} : (editItem._isNew ? (data[tab][0] || {}) : editItem)).map(k => { 
-                                                if(['ID','Date','PageKey','Key','MenuCategory','Title','Label','Type','Order','_isNew','settings','Multi_Attachments','Multi_Links'].includes(k)) return null; 
+                                                if(['ID','Date','PageKey','Key','MenuCategory','Title','Label','Type','Order','_isNew','settings'].includes(k)) return null; 
                                                 if(k.startsWith('_page')) return null; 
                                                 if(tab === 'News' && (k === 'Content' || k === 'PDF_URL' || k === 'Link_URL' || k === 'Link_Label')) return null; 
-                                                return <div key={k}><label className="text-sm font-bold text-gray-600 mb-1 block">{getLabel(k)}{k === 'ImageURL' && imageHints[tab] && <span className="text-blue-500 font-normal text-xs ml-2">({imageHints[tab]})</span>}</label>{k === 'Content' ? <div className="space-y-1"><textarea className="w-full border p-3 rounded-lg h-48 font-mono text-sm" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder="ใส่ข้อความ หรือ HTML"></textarea></div> : <input className="w-full border p-3 rounded-lg" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} />}</div> 
+                                                return <div key={k}><label className="text-sm font-bold text-gray-600 mb-1 block">{getLabel(k)}{k === 'ImageURL' && imageHints[tab] && <span className="text-blue-500 font-normal text-xs ml-2">({imageHints[tab]})</span>}{k === 'Banners' && imageHints[tab] && <span className="text-blue-500 font-normal text-xs ml-2">({imageHints[tab]})</span>}</label>{k === 'Content' ? <div className="space-y-1"><textarea className="w-full border p-3 rounded-lg h-48 font-mono text-sm" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder="ใส่ข้อความ หรือ HTML"></textarea></div> : <input className="w-full border p-3 rounded-lg" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} />}</div> 
                                             })}
                                             <div className="flex gap-4"><button type="submit" className="flex-1 bg-primary text-white py-3 rounded-lg font-bold shadow hover:opacity-90 transition">บันทึกข้อมูล</button>{!editItem._isNew && tab !== 'Settings' && (<button type="button" onClick={() => handleDelete(editItem.ID || editItem.PageKey)} className="bg-red-500 text-white px-6 py-3 rounded-lg font-bold shadow hover:bg-red-600 transition"><i className="fas fa-trash-alt mr-2"></i> ลบข้อมูล</button>)}</div>
                                         </form>
@@ -1129,7 +1047,7 @@
                                 {tab === 'Pages' ? (Object.entries(getGroupedPages()).map(([key, group]) => (group.items.length > 0 && (<div key={key} className="bg-white rounded-xl border border-gray-200 overflow-hidden"><div className="bg-gray-100 px-5 py-3 font-bold text-gray-700 border-b flex justify-between"><span>{group.label}</span><span className="text-xs bg-gray-200 px-2 py-1 rounded text-gray-500">{group.items.length} รายการ</span></div><div className="divide-y">{group.items.map((item, i) => (<div key={i} className="p-4 flex justify-between items-center hover:bg-blue-50 transition"><div className="font-bold text-slate-800">{item.Title}</div><div className="flex items-center gap-2"><button onClick={()=>handleEdit(item)} className="text-blue-500 hover:text-blue-700 px-2"><i className="fas fa-edit fa-lg"></i></button><button onClick={()=>handleDelete(item.PageKey)} className="text-red-500 hover:text-red-700 px-2"><i className="fas fa-trash fa-lg"></i></button></div></div>))}</div></div>)))) 
                                 : 
                                 (<div className="grid gap-3">{getSortedAdminData(data[tab]).map((item,i) => (<div key={i} className="bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center hover:shadow-md transition"><div className="flex items-center gap-4">{item.ImageURL && 
-                                    <img src={getCleanImageUrl(item.ImageURL.split(',')[0])} className="w-12 h-12 rounded-lg object-cover bg-gray-100" />}<div><div className="font-bold">{item.Title || item.Name || item.Caption || item.Label}</div><div className="text-xs text-gray-400">{item.Order ? `ลำดับ: ${item.Order} | ` : ''}{item.Category || item.MenuCategory || item.PageKey}</div></div></div><div className="flex items-center gap-2"><button onClick={()=>handleEdit(item)} className="text-blue-500 hover:text-blue-700 px-2"><i className="fas fa-edit fa-lg"></i></button><button onClick={()=>handleDelete(item.ID || item.PageKey)} className="text-red-500 hover:text-red-700 px-2"><i className="fas fa-trash fa-lg"></i></button></div></div>))}</div>)}
+                                    <img src={getCleanImageUrl(item.ImageURL.split(',')[0])} className="w-12 h-12 rounded-lg object-cover bg-gray-100" />}{item.Banners && <img src={getCleanImageUrl(item.Banners.split(',')[0])} className="w-12 h-12 rounded-lg object-cover bg-gray-100" />}<div><div className="font-bold">{item.Title || item.Name || item.Caption || item.Label || (item.Banners ? 'Banner Fallback' : 'Item')}</div><div className="text-xs text-gray-400">{item.Order ? `ลำดับ: ${item.Order} | ` : ''}{item.Category || item.MenuCategory || item.PageKey}</div></div></div><div className="flex items-center gap-2"><button onClick={()=>handleEdit(item)} className="text-blue-500 hover:text-blue-700 px-2"><i className="fas fa-edit fa-lg"></i></button><button onClick={()=>handleDelete(item.ID || item.PageKey)} className="text-red-500 hover:text-red-700 px-2"><i className="fas fa-trash fa-lg"></i></button></div></div>))}</div>)}
                             </div>
                             )}
                         </main>
@@ -1259,6 +1177,9 @@
             
             const sortedPersonnel = [...data.Personnel].sort((a,b) => Number(a.Order||0) - Number(b.Order||0));
 
+            // NEW: Logic to find the fallback banner
+            const fallbackNewsImage = data.Bannersnews?.find(b => String(b.Active).trim().toUpperCase() === 'TRUE')?.Banners || '';
+
             return (
                 <div className="min-h-screen flex flex-col font-sarabun bg-slate-50 relative w-full">
                     {isAdmin ? <AdminPanel data={data} reload={load} onLogout={handleLogout} onClose={()=>handleLogout()} /> : (
@@ -1278,13 +1199,14 @@
                                             </div>
                                             <div className="grid md:grid-cols-3 gap-8">
                                                 {sortedNews.slice(0,3).map((n,i)=>(
-                                                    <NewsCard key={i} n={n} onClick={()=>setPage({id:'news_detail', key: n.ID, item: n})} />
+                                                    // UPDATE: Pass fallback prop
+                                                    <NewsCard key={i} n={n} onClick={()=>setPage({id:'news_detail', key: n.ID, item: n})} fallback={fallbackNewsImage} />
                                                 ))}
                                             </div>
                                         </div>
                                     </>
                                 )}
-                                {page.id === 'news' && <div className="content-container py-12"><h2 className="text-3xl font-bold text-center mb-10 text-primary">ข่าวสารทั้งหมด</h2><div className="grid md:grid-cols-3 gap-8">{sortedNews.map((n,i)=>(<NewsCard key={i} n={n} onClick={()=>setPage({id:'news_detail', key: n.ID, item: n})} />))}</div></div>}
+                                {page.id === 'news' && <div className="content-container py-12"><h2 className="text-3xl font-bold text-center mb-10 text-primary">ข่าวสารทั้งหมด</h2><div className="grid md:grid-cols-3 gap-8">{sortedNews.map((n,i)=>(<NewsCard key={i} n={n} onClick={()=>setPage({id:'news_detail', key: n.ID, item: n})} fallback={fallbackNewsImage} />))}</div></div>}
                                 {page.id === 'news_detail' && (
                                     (() => {
                                         // Try to get item from state, OR find it in data using key from URL (Fix for Refresh)
@@ -1346,5 +1268,4 @@
     </script>
 </body>
 </html>
-
 
