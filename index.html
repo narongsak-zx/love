@@ -1136,7 +1136,14 @@
                         sessionStorage.setItem('phukham_admin_session', 'true');
                         sessionStorage.setItem('phukham_admin_role', res.role);
                     } else { 
-                        alert('รหัสผิดพลาด'); 
+                        // Modified Alert Logic
+                        if (res.error === 'user_not_found') {
+                            alert('ไม่พบข้อมูลผู้ใช้');
+                        } else if (res.error === 'wrong_password') {
+                            alert('รหัสผ่านไม่ถูกต้อง');
+                        } else {
+                            alert('เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+                        }
                     } 
                 } catch(e) {
                     alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
