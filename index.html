@@ -1089,10 +1089,11 @@
                 }
             }, []);
 
+            // UPDATE: ปรับปรุงฟังก์ชัน Login
             const handleLogin = async (e) => { 
                 e.preventDefault(); 
                 
-                // 1. ตรวจสอบช่องว่าง (Client-side validation)
+                // 1. ตรวจสอบช่องว่าง
                 if (!user.trim() || !pass.trim()) {
                     alert('กรุณากรอกข้อมูล');
                     return;
@@ -1101,15 +1102,22 @@
                 setIsLoggingIn(true);
                 try {
                     const res = await api.post({ action: 'login', username: user, password: pass }); 
+                    
                     if(res.success) { 
                         setIsAdmin(true); 
                         setShowLogin(false); 
                         sessionStorage.setItem('phukham_admin_session', 'true');
-                        setUser(''); 
+                        // Reset form
+                        setUser('');
                         setPass('');
                     } else { 
-                        // 2. แสดงข้อความผิดพลาดจาก Backend ('ไม่พบข้อมูลผู้ใช้' หรือ 'รหัสผ่านไม่ถูกต้อง')
-                        alert(res.message || 'รหัสผิดพลาด'); 
+                        // 2. ตรวจสอบ Error Code
+                        if (res.reason === 'wrong_password') {
+                            alert('รหัสผ่านไม่ถูกต้อง');
+                        } else {
+                            // reason = 'user_not_found' หรือกรณีอื่นๆ
+                            alert('ไม่พบข้อมูลผู้ใช้');
+                        }
                     } 
                 } catch(e) {
                     alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
