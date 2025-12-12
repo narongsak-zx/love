@@ -524,18 +524,25 @@
         };
 
         const NewsCard = ({ n, onClick, fallback }) => {
-            // Check for valid strings (not just undefined/null)
-            const hasImage = n.ImageURL && n.ImageURL.trim().length > 0;
-            const hasPdf = n.PDF_URL && n.PDF_URL.trim().length > 0;
+            // Check specifically for non-empty strings
+            const hasImage = n.ImageURL && typeof n.ImageURL === 'string' && n.ImageURL.trim() !== '';
+            const hasPdf = n.PDF_URL && typeof n.PDF_URL === 'string' && n.PDF_URL.trim() !== '';
+            const hasFallback = fallback && typeof fallback === 'string' && fallback.trim() !== '';
             
-            // LOGIC FIX: If no image AND no PDF, check for fallback
-            const showFallback = !hasImage && !hasPdf && fallback;
-
+            // PRIORITY:
+            // 1. ImageURL (if exists) -> Show Image
+            // 2. PDF (if exists and NO Image) -> Show PDF Icon
+            // 3. Fallback (if NO Image AND NO PDF) -> Show Fallback
+            
+            let displayMode = 'white';
+            if (hasImage) displayMode = 'image';
+            else if (hasPdf) displayMode = 'pdf';
+            else if (hasFallback) displayMode = 'fallback'; // If fallback exists, use it
+            
             return (
                 <div onClick={onClick} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col group cursor-pointer hover:shadow-2xl hover:-translate-y-2 transition duration-300 transform">
                     <div className="aspect-[16/9] w-full overflow-hidden relative bg-gray-100">
-                         {/* 1. Show Image if available */}
-                         {hasImage ? (
+                         {displayMode === 'image' && (
                             <>
                                 <img 
                                     src={getCleanImageUrl(n.ImageURL)} 
@@ -548,22 +555,24 @@
                                     </div>
                                 )}
                             </>
-                         ) : hasPdf ? (
-                            /* 2. No Image, but Has PDF */
+                         )}
+
+                         {displayMode === 'pdf' && (
                             <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 flex-col">
                                 <i className="fas fa-file-pdf text-4xl mb-2 text-red-500"></i>
                                 <span className="text-sm font-bold">เอกสาร PDF</span>
                             </div>
-                         ) : showFallback ? (
-                            /* 3. No Image, No PDF -> Show Fallback Banner from Bannersnews */
-                            /* Removed 'display:none' on error to prevent white screen, added placeholder instead */
+                         )}
+
+                         {displayMode === 'fallback' && (
                             <img 
                                 src={getCleanImageUrl(fallback)} 
                                 className="w-full h-full object-cover group-hover:scale-110 transition duration-700" 
                                 onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/1920x1080?text=Bannersnews+Image+Error';}} 
                             />
-                         ) : (
-                            /* 4. No Image, No PDF, No Fallback -> White BG */
+                         )}
+
+                         {displayMode === 'white' && (
                             <div className="w-full h-full bg-white"></div>
                          )}
                          
@@ -1116,7 +1125,8 @@
             // }, [page]);
 
             const load = async () => {
-                const cached = localStorage.getItem('phukhamData');
+                // UPDATE: CHANGE CACHE KEY TO FORCE REFRESH DATA STRUCTURE
+                const cached = localStorage.getItem('phukhamData_v3');
                 if (cached) {
                     try { setData(JSON.parse(cached)); } catch(e) { console.error("Cache error"); }
                 }
@@ -1124,7 +1134,8 @@
                 try {
                     const freshData = await api.fetchAll();
                     setData(freshData);
-                    localStorage.setItem('phukhamData', JSON.stringify(freshData));
+                    // UPDATE: CHANGE CACHE KEY TO FORCE REFRESH DATA STRUCTURE
+                    localStorage.setItem('phukhamData_v3', JSON.stringify(freshData));
                 } catch (err) {
                     console.error("Failed to load data", err);
                     if (!cached) alert("ไม่สามารถโหลดข้อมูลได้");
@@ -1177,7 +1188,8 @@
             const sortedPersonnel = [...data.Personnel].sort((a,b) => Number(a.Order||0) - Number(b.Order||0));
 
             // NEW: Logic to find the fallback banner
-            const fallbackNewsImage = data.Bannersnews?.find(b => String(b.Active).trim().toUpperCase() === 'TRUE')?.Banners || '';
+            const bannersNewsList = data.Bannersnews || [];
+            const fallbackNewsImage = bannersNewsList.find(b => String(b.Active).trim().toUpperCase() === 'TRUE')?.Banners || '';
 
             return (
                 <div className="min-h-screen flex flex-col font-sarabun bg-slate-50 relative w-full">
