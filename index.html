@@ -199,7 +199,6 @@
             if (!url) return '';
             const u = url.trim();
             if (u.includes('drive.google.com')) {
-                // Ensure preview mode is used
                 return u.replace(/\/view.*/, '/preview').replace(/\/open\?id=/, '/file/d/').replace(/\/edit.*/, '/preview');
             }
             return u;
@@ -357,7 +356,6 @@
                 <div className="w-full max-w-[1920px] mx-auto relative aspect-[1920/800] bg-primary group overflow-hidden">
                     {displayBanners.map((b, i) => (
                         <div key={i} className={`absolute inset-0 transition-opacity duration-1000 ${i === idx ? 'opacity-100' : 'opacity-0'}`}>
-                            {/* REMOVED DARK OVERLAY */}
                             <img src={getCleanImageUrl(b.ImageURL)} className={`slide-image ${i === idx ? 'slide-active' : ''}`} onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/1920x800/003366/ffffff?text=Image+Error';}} />
                         </div>
                     ))}
@@ -461,9 +459,6 @@
                     <div className="content-container py-12 fade-in">
                         <div className="bg-white rounded-[2rem] shadow-xl overflow-hidden border border-gray-100">
                             
-                            {/* ========================================================
-                                1. IMAGE SECTION (Top if exists)
-                            ======================================================== */}
                             {hasImage && (
                                 <div className="w-full flex justify-center bg-gray-100 border-b border-gray-100">
                                      <img 
@@ -475,9 +470,6 @@
                                 </div>
                             )}
 
-                            {/* ========================================================
-                                2. TEXT CONTENT SECTION (Middle)
-                            ======================================================== */}
                             <div className="p-12 md:p-16 max-w-5xl mx-auto">
                                 <div className="flex flex-wrap items-center gap-4 mb-8">
                                     <span className="bg-blue-50 text-[#003366] px-4 py-1.5 rounded-full text-sm font-bold shadow-sm border border-blue-100">{item.Category}</span>
@@ -487,9 +479,6 @@
                                 <div className="prose prose-lg prose-blue max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap html-content" dangerouslySetInnerHTML={{__html: smartLinkify(item.Content)}} />
                             </div>
 
-                            {/* ========================================================
-                                3. ATTACHMENT SECTION (PDF & Links)
-                            ======================================================== */}
                             {(hasPdf || hasLink) && (
                                 <div className="w-full bg-gray-50 border-t border-gray-200 p-8 md:p-12 flex flex-col md:flex-row justify-center gap-4">
                                     {hasPdf && (
@@ -523,26 +512,14 @@
             );
         };
 
-        const NewsCard = ({ n, onClick, fallback }) => {
-            // Check specifically for non-empty strings
-            const hasImage = n.ImageURL && typeof n.ImageURL === 'string' && n.ImageURL.trim() !== '';
-            const hasPdf = n.PDF_URL && typeof n.PDF_URL === 'string' && n.PDF_URL.trim() !== '';
-            const hasFallback = fallback && typeof fallback === 'string' && fallback.trim() !== '';
-            
-            // PRIORITY:
-            // 1. ImageURL (if exists) -> Show Image
-            // 2. PDF (if exists and NO Image) -> Show PDF Icon
-            // 3. Fallback (if NO Image AND NO PDF) -> Show Fallback
-            
-            let displayMode = 'white';
-            if (hasImage) displayMode = 'image';
-            else if (hasPdf) displayMode = 'pdf';
-            else if (hasFallback) displayMode = 'fallback'; // If fallback exists, use it
-            
+        const NewsCard = ({ n, onClick }) => {
+            const hasImage = !!n.ImageURL;
+            const hasPdf = !!n.PDF_URL;
+
             return (
                 <div onClick={onClick} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden h-full flex flex-col group cursor-pointer hover:shadow-2xl hover:-translate-y-2 transition duration-300 transform">
                     <div className="aspect-[16/9] w-full overflow-hidden relative bg-gray-100">
-                         {displayMode === 'image' && (
+                         {hasImage ? (
                             <>
                                 <img 
                                     src={getCleanImageUrl(n.ImageURL)} 
@@ -555,25 +532,15 @@
                                     </div>
                                 )}
                             </>
-                         )}
-
-                         {displayMode === 'pdf' && (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 flex-col">
-                                <i className="fas fa-file-pdf text-4xl mb-2 text-red-500"></i>
-                                <span className="text-sm font-bold">เอกสาร PDF</span>
-                            </div>
-                         )}
-
-                         {displayMode === 'fallback' && (
-                            <img 
-                                src={getCleanImageUrl(fallback)} 
-                                className="w-full h-full object-cover group-hover:scale-110 transition duration-700" 
-                                onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/1920x1080?text=Bannersnews+Image+Error';}} 
-                            />
-                         )}
-
-                         {displayMode === 'white' && (
-                            <div className="w-full h-full bg-white"></div>
+                         ) : (
+                            hasPdf ? (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500 flex-col">
+                                    <i className="fas fa-file-pdf text-4xl mb-2 text-red-500"></i>
+                                    <span className="text-sm font-bold">เอกสาร PDF</span>
+                                </div>
+                            ) : (
+                                <div className="w-full h-full bg-white"></div>
+                            )
                          )}
                          
                          <div className="absolute top-4 left-4 pointer-events-none">
@@ -680,7 +647,6 @@
                 FacebookURL: ''
             });
 
-            // UPDATE: Added 'Banners' mapping
             const labelMap = { 
                 'Title': 'หัวข้อ / ชื่อ', 
                 'Content': 'เนื้อหา (HTML/Embed)', 
@@ -700,20 +666,17 @@
                 'ID': 'รหัสอ้างอิง', 
                 'PageKey': 'รหัสหน้า', 
                 'MenuCategory': 'แสดงในเมนูหลัก', 
-                'Order': 'ลำดับการแสดงผล',
-                'Banners': 'รูปภาพ (URL)'
+                'Order': 'ลำดับการแสดงผล' 
             };
             const getLabel = (key) => labelMap[key] || key;
             
-            // UPDATE: Added 'Bannersnews' hint
             const imageHints = {
                 'Banners': 'แนะนำ 1920 x 800 px (แนวนอน)',
                 'Newsletters': 'แนะนำ 1414 x 2000 px (แนวตั้ง A4)',
                 'News': 'แนะนำ 1920 x 1080 px (16:9) หรือตามความเหมาะสม',
                 'Personnel': 'แนะนำ 500 x 500 px (สี่เหลี่ยมจัตุรัส)',
                 'Pages': 'แนะนำ 2000 x 1414 px (แนวนอน A4) หรือตามความเหมาะสม',
-                'Menus': 'แนะนำ 1280 x 720 px (สำหรับ Header หน้า Page)',
-                'Bannersnews': 'แนะนำ 1920 x 1080 px (ใช้เมื่อข่าวไม่มีรูป)'
+                'Menus': 'แนะนำ 1280 x 720 px (สำหรับ Header หน้า Page)'
             };
 
             const handleAddNew = () => {
@@ -855,17 +818,7 @@
                 setEditItem({ settings: true }); 
             }
             
-            // UPDATE: Added 'Bannersnews' to tabs
-            const menuTabs = { 
-                'News':'ข่าวประชาสัมพันธ์', 
-                'Newsletters': 'จดหมายข่าว', 
-                'Personnel':'บุคลากร', 
-                'Banners':'สไลด์', 
-                'Bannersnews': 'ภาพข่าวสำรอง',
-                'Pages':'เนื้อหาหน้าย่อย', 
-                'Menus':'เมนูหลัก', 
-                'Settings':'ระบบ' 
-            };
+            const menuTabs = { 'News':'ข่าวประชาสัมพันธ์', 'Newsletters': 'จดหมายข่าว', 'Personnel':'บุคลากร', 'Banners':'สไลด์', 'Pages':'เนื้อหาหน้าย่อย', 'Menus':'เมนูหลัก', 'Settings':'ระบบ' };
             
             const getGroupedPages = () => { 
                 if (tab !== 'Pages') return null; 
@@ -919,7 +872,7 @@
                     </header>
                     <div className="flex flex-1 overflow-hidden">
                         <aside className="w-64 bg-white border-r hidden md:block p-4 space-y-1 overflow-y-auto">
-                            {['News', 'Newsletters', 'Personnel', 'Banners', 'Bannersnews', 'Pages'].map(t => (<button key={t} onClick={()=>{setTab(t); setEditItem(null); setForm({});}} className={`w-full text-left px-4 py-3 rounded-lg text-sm transition ${tab===t ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs[t]}</button>))}
+                            {['News', 'Newsletters', 'Personnel', 'Banners', 'Pages'].map(t => (<button key={t} onClick={()=>{setTab(t); setEditItem(null); setForm({});}} className={`w-full text-left px-4 py-3 rounded-lg text-sm transition ${tab===t ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs[t]}</button>))}
                             <div className="border-t my-2 pt-2"><button onClick={()=>{setTab('Menus'); setEditItem(null); setForm({});}} className={`w-full text-left px-4 py-2 rounded-lg text-sm transition ${tab==='Menus' ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs['Menus']}</button><button onClick={()=>{setTab('Settings'); openSettings();}} className={`w-full text-left px-4 py-2 rounded-lg text-sm transition ${tab==='Settings' ? 'bg-primary text-white font-bold' : 'text-gray-600 hover:bg-gray-50'}`}>{menuTabs['Settings']}</button></div>
                         </aside>
                         <main className="flex-1 p-8 overflow-auto">
@@ -1043,7 +996,7 @@
                                                 if(['ID','Date','PageKey','Key','MenuCategory','Title','Label','Type','Order','_isNew','settings'].includes(k)) return null; 
                                                 if(k.startsWith('_page')) return null; 
                                                 if(tab === 'News' && (k === 'Content' || k === 'PDF_URL' || k === 'Link_URL' || k === 'Link_Label')) return null; 
-                                                return <div key={k}><label className="text-sm font-bold text-gray-600 mb-1 block">{getLabel(k)}{k === 'ImageURL' && imageHints[tab] && <span className="text-blue-500 font-normal text-xs ml-2">({imageHints[tab]})</span>}{k === 'Banners' && imageHints[tab] && <span className="text-blue-500 font-normal text-xs ml-2">({imageHints[tab]})</span>}</label>{k === 'Content' ? <div className="space-y-1"><textarea className="w-full border p-3 rounded-lg h-48 font-mono text-sm" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder="ใส่ข้อความ หรือ HTML"></textarea></div> : <input className="w-full border p-3 rounded-lg" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} />}</div> 
+                                                return <div key={k}><label className="text-sm font-bold text-gray-600 mb-1 block">{getLabel(k)}{k === 'ImageURL' && imageHints[tab] && <span className="text-blue-500 font-normal text-xs ml-2">({imageHints[tab]})</span>}</label>{k === 'Content' ? <div className="space-y-1"><textarea className="w-full border p-3 rounded-lg h-48 font-mono text-sm" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder="ใส่ข้อความ หรือ HTML"></textarea></div> : <input className="w-full border p-3 rounded-lg" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} />}</div> 
                                             })}
                                             <div className="flex gap-4"><button type="submit" className="flex-1 bg-primary text-white py-3 rounded-lg font-bold shadow hover:opacity-90 transition">บันทึกข้อมูล</button>{!editItem._isNew && tab !== 'Settings' && (<button type="button" onClick={() => handleDelete(editItem.ID || editItem.PageKey)} className="bg-red-500 text-white px-6 py-3 rounded-lg font-bold shadow hover:bg-red-600 transition"><i className="fas fa-trash-alt mr-2"></i> ลบข้อมูล</button>)}</div>
                                         </form>
@@ -1055,7 +1008,7 @@
                                 {tab === 'Pages' ? (Object.entries(getGroupedPages()).map(([key, group]) => (group.items.length > 0 && (<div key={key} className="bg-white rounded-xl border border-gray-200 overflow-hidden"><div className="bg-gray-100 px-5 py-3 font-bold text-gray-700 border-b flex justify-between"><span>{group.label}</span><span className="text-xs bg-gray-200 px-2 py-1 rounded text-gray-500">{group.items.length} รายการ</span></div><div className="divide-y">{group.items.map((item, i) => (<div key={i} className="p-4 flex justify-between items-center hover:bg-blue-50 transition"><div className="font-bold text-slate-800">{item.Title}</div><div className="flex items-center gap-2"><button onClick={()=>handleEdit(item)} className="text-blue-500 hover:text-blue-700 px-2"><i className="fas fa-edit fa-lg"></i></button><button onClick={()=>handleDelete(item.PageKey)} className="text-red-500 hover:text-red-700 px-2"><i className="fas fa-trash fa-lg"></i></button></div></div>))}</div></div>)))) 
                                 : 
                                 (<div className="grid gap-3">{getSortedAdminData(data[tab]).map((item,i) => (<div key={i} className="bg-white p-4 rounded-xl border border-gray-100 flex justify-between items-center hover:shadow-md transition"><div className="flex items-center gap-4">{item.ImageURL && 
-                                    <img src={getCleanImageUrl(item.ImageURL.split(',')[0])} className="w-12 h-12 rounded-lg object-cover bg-gray-100" />}{item.Banners && <img src={getCleanImageUrl(item.Banners.split(',')[0])} className="w-12 h-12 rounded-lg object-cover bg-gray-100" />}<div><div className="font-bold">{item.Title || item.Name || item.Caption || item.Label || (item.Banners ? 'Banner Fallback' : 'Item')}</div><div className="text-xs text-gray-400">{item.Order ? `ลำดับ: ${item.Order} | ` : ''}{item.Category || item.MenuCategory || item.PageKey}</div></div></div><div className="flex items-center gap-2"><button onClick={()=>handleEdit(item)} className="text-blue-500 hover:text-blue-700 px-2"><i className="fas fa-edit fa-lg"></i></button><button onClick={()=>handleDelete(item.ID || item.PageKey)} className="text-red-500 hover:text-red-700 px-2"><i className="fas fa-trash fa-lg"></i></button></div></div>))}</div>)}
+                                    <img src={getCleanImageUrl(item.ImageURL.split(',')[0])} className="w-12 h-12 rounded-lg object-cover bg-gray-100" />}<div><div className="font-bold">{item.Title || item.Name || item.Caption || item.Label}</div><div className="text-xs text-gray-400">{item.Order ? `ลำดับ: ${item.Order} | ` : ''}{item.Category || item.MenuCategory || item.PageKey}</div></div></div><div className="flex items-center gap-2"><button onClick={()=>handleEdit(item)} className="text-blue-500 hover:text-blue-700 px-2"><i className="fas fa-edit fa-lg"></i></button><button onClick={()=>handleDelete(item.ID || item.PageKey)} className="text-red-500 hover:text-red-700 px-2"><i className="fas fa-trash fa-lg"></i></button></div></div>))}</div>)}
                             </div>
                             )}
                         </main>
@@ -1065,7 +1018,6 @@
         };
 
         const App = () => {
-            // UPDATE: Initialize state from URL logic primarily, fallback to 'home'
             const [page, _setPage] = useState(() => {
                 const params = new URLSearchParams(window.location.search);
                 const pId = params.get('page');
@@ -1076,28 +1028,22 @@
                 return { id: 'home' };
             });
 
-            // UPDATE: Wrapper function to handle history pushState
             const setPage = (newPage) => {
                 _setPage(newPage);
                 const params = new URLSearchParams();
                 if (newPage.id) params.set('page', newPage.id);
                 if (newPage.key) params.set('key', newPage.key);
                 
-                // Construct new URL
                 const newUrl = `${window.location.pathname}?${params.toString()}`;
                 
-                // Push state to history. We store the full object 'newPage' in state
-                // so we can retrieve complex data (like 'item') when user clicks Back.
                 window.history.pushState(newPage, '', newUrl);
             };
 
-            // UPDATE: Effect to handle Browser Back/Forward buttons
             useEffect(() => {
                 const onPopState = (event) => {
                     if (event.state) {
                         _setPage(event.state);
                     } else {
-                        // Fallback parsing if state is empty (e.g. manual URL change)
                         const params = new URLSearchParams(window.location.search);
                         const pId = params.get('page') || 'home';
                         const key = params.get('key');
@@ -1108,7 +1054,6 @@
                 return () => window.removeEventListener('popstate', onPopState);
             }, []);
 
-            // === UPDATE: SCROLL TO TOP ON PAGE CHANGE ===
             useEffect(() => {
                 window.scrollTo(0, 0);
             }, [page]);
@@ -1118,15 +1063,10 @@
             const [showLogin, setShowLogin] = useState(false);
             const [user, setUser] = useState('');
             const [pass, setPass] = useState('');
-
-            // UPDATE: Removed session storage sync for page state as we now use URL/History API
-            // useEffect(() => {
-            //     sessionStorage.setItem('phukham_page_state', JSON.stringify(page));
-            // }, [page]);
+            const [isLoggingIn, setIsLoggingIn] = useState(false);
 
             const load = async () => {
-                // UPDATE: CHANGE CACHE KEY TO FORCE REFRESH DATA STRUCTURE
-                const cached = localStorage.getItem('phukhamData_v3');
+                const cached = localStorage.getItem('phukhamData');
                 if (cached) {
                     try { setData(JSON.parse(cached)); } catch(e) { console.error("Cache error"); }
                 }
@@ -1134,8 +1074,7 @@
                 try {
                     const freshData = await api.fetchAll();
                     setData(freshData);
-                    // UPDATE: CHANGE CACHE KEY TO FORCE REFRESH DATA STRUCTURE
-                    localStorage.setItem('phukhamData_v3', JSON.stringify(freshData));
+                    localStorage.setItem('phukhamData', JSON.stringify(freshData));
                 } catch (err) {
                     console.error("Failed to load data", err);
                     if (!cached) alert("ไม่สามารถโหลดข้อมูลได้");
@@ -1152,14 +1091,21 @@
 
             const handleLogin = async (e) => { 
                 e.preventDefault(); 
-                const res = await api.post({ action: 'login', username: user, password: pass }); 
-                if(res.success) { 
-                    setIsAdmin(true); 
-                    setShowLogin(false); 
-                    sessionStorage.setItem('phukham_admin_session', 'true');
-                } else { 
-                    alert('รหัสผิดพลาด'); 
-                } 
+                setIsLoggingIn(true);
+                try {
+                    const res = await api.post({ action: 'login', username: user, password: pass }); 
+                    if(res.success) { 
+                        setIsAdmin(true); 
+                        setShowLogin(false); 
+                        sessionStorage.setItem('phukham_admin_session', 'true');
+                    } else { 
+                        alert('รหัสผิดพลาด'); 
+                    } 
+                } catch(e) {
+                    alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+                } finally {
+                    setIsLoggingIn(false);
+                }
             };
 
             const handleLogout = () => {
@@ -1187,10 +1133,6 @@
             
             const sortedPersonnel = [...data.Personnel].sort((a,b) => Number(a.Order||0) - Number(b.Order||0));
 
-            // NEW: Logic to find the fallback banner
-            const bannersNewsList = data.Bannersnews || [];
-            const fallbackNewsImage = bannersNewsList.find(b => String(b.Active).trim().toUpperCase() === 'TRUE')?.Banners || '';
-
             return (
                 <div className="min-h-screen flex flex-col font-sarabun bg-slate-50 relative w-full">
                     {isAdmin ? <AdminPanel data={data} reload={load} onLogout={handleLogout} onClose={()=>handleLogout()} /> : (
@@ -1210,17 +1152,15 @@
                                             </div>
                                             <div className="grid md:grid-cols-3 gap-8">
                                                 {sortedNews.slice(0,3).map((n,i)=>(
-                                                    // UPDATE: Pass fallback prop
-                                                    <NewsCard key={i} n={n} onClick={()=>setPage({id:'news_detail', key: n.ID, item: n})} fallback={fallbackNewsImage} />
+                                                    <NewsCard key={i} n={n} onClick={()=>setPage({id:'news_detail', key: n.ID, item: n})} />
                                                 ))}
                                             </div>
                                         </div>
                                     </>
                                 )}
-                                {page.id === 'news' && <div className="content-container py-12"><h2 className="text-3xl font-bold text-center mb-10 text-primary">ข่าวสารทั้งหมด</h2><div className="grid md:grid-cols-3 gap-8">{sortedNews.map((n,i)=>(<NewsCard key={i} n={n} onClick={()=>setPage({id:'news_detail', key: n.ID, item: n})} fallback={fallbackNewsImage} />))}</div></div>}
+                                {page.id === 'news' && <div className="content-container py-12"><h2 className="text-3xl font-bold text-center mb-10 text-primary">ข่าวสารทั้งหมด</h2><div className="grid md:grid-cols-3 gap-8">{sortedNews.map((n,i)=>(<NewsCard key={i} n={n} onClick={()=>setPage({id:'news_detail', key: n.ID, item: n})} />))}</div></div>}
                                 {page.id === 'news_detail' && (
                                     (() => {
-                                        // Try to get item from state, OR find it in data using key from URL (Fix for Refresh)
                                         const newsItem = page.item || (data && data.News && page.key ? data.News.find(n => n.ID == page.key) : null);
                                         
                                         if (newsItem) {
@@ -1267,7 +1207,37 @@
                                 onAdminClick={() => setShowLogin(true)}
                             />
 
-                            {showLogin && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn"><div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-8 relative"><button onClick={()=>setShowLogin(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500"><i className="fas fa-times text-lg"></i></button><div className="text-center mb-6"><div className="w-16 h-16 bg-blue-50 text-[#003366] rounded-full flex items-center justify-center text-2xl mx-auto mb-3"><i className="fas fa-lock"></i></div><h3 className="text-xl font-bold text-primary">เข้าสู่ระบบแอดมิน</h3></div><form onSubmit={handleLogin} className="space-y-4"><div><label className="text-xs font-bold text-gray-400 uppercase">ชื่อผู้ใช้งาน</label><input value={user} onChange={e=>setUser(e.target.value)} className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-800 outline-none transition" placeholder="Username" /></div><div><label className="text-xs font-bold text-gray-400 uppercase">รหัสผ่าน</label><input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-800 outline-none transition" placeholder="Password" /></div><button className="w-full bg-primary text-white py-3 rounded-lg font-bold shadow hover:opacity-90 transition transform active:scale-95">เข้าสู่ระบบ</button></form></div></div>}
+                            {showLogin && (
+                                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
+                                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-8 relative">
+                                        <button onClick={()=>setShowLogin(false)} className="absolute top-4 right-4 text-gray-400 hover:text-red-500"><i className="fas fa-times text-lg"></i></button>
+                                        <div className="text-center mb-6">
+                                            <div className="w-16 h-16 bg-blue-50 text-[#003366] rounded-full flex items-center justify-center text-2xl mx-auto mb-3"><i className="fas fa-lock"></i></div>
+                                            <h3 className="text-xl font-bold text-primary">เข้าสู่ระบบแอดมิน</h3>
+                                        </div>
+                                        <form onSubmit={handleLogin} className="space-y-4">
+                                            <div>
+                                                <label className="text-xs font-bold text-gray-400 uppercase">ชื่อผู้ใช้งาน</label>
+                                                <input value={user} onChange={e=>setUser(e.target.value)} className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-800 outline-none transition" placeholder="Username" disabled={isLoggingIn} />
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-bold text-gray-400 uppercase">รหัสผ่าน</label>
+                                                <input type="password" value={pass} onChange={e=>setPass(e.target.value)} className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-800 outline-none transition" placeholder="Password" disabled={isLoggingIn} />
+                                            </div>
+                                            <button 
+                                                disabled={isLoggingIn}
+                                                className={`w-full bg-primary text-white py-3 rounded-lg font-bold shadow transition transform ${isLoggingIn ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90 active:scale-95'}`}
+                                            >
+                                                {isLoggingIn ? (
+                                                    <span><i className="fas fa-circle-notch fa-spin mr-2"></i> กำลังตรวจสอบ...</span>
+                                                ) : (
+                                                    "เข้าสู่ระบบ"
+                                                )}
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
@@ -1279,5 +1249,4 @@
     </script>
 </body>
 </html>
-
 
