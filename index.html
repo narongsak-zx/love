@@ -498,6 +498,7 @@
                             ======================================================== */}
                             {(hasPdf || hasLink || multiAttachments.length > 0 || multiLinks.length > 0) && (
                                 <div className="w-full bg-gray-50 border-t border-gray-200 p-8 md:p-12">
+                                    {/* REMOVED HEADER AS REQUESTED */}
                                     <div className="flex flex-col gap-4 max-w-3xl mx-auto">
                                         {/* Original Single PDF */}
                                         {hasPdf && (
@@ -552,6 +553,7 @@
                                                 className="px-8 py-4 bg-green-600 text-white rounded-xl font-bold shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-3 text-lg hover:-translate-y-1 transform duration-200"
                                             >
                                                 <i className="fas fa-external-link-alt text-2xl"></i> 
+                                                {/* Ensure LABEL is shown, fallback to default text if empty */}
                                                 <span>{l.label || `ลิงก์ที่เกี่ยวข้อง ${idx+1}`}</span>
                                             </a>
                                             )
@@ -1344,4 +1346,5 @@
     </script>
 </body>
 </html>
+
 
