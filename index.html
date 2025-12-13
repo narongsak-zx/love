@@ -6,20 +6,11 @@
     <title>โรงเรียนพุขามครุฑมณีอุทิศ</title>
     
     <!-- ========================================== -->
-    <!-- PERFORMANCE: Preconnect to Critical CDNs   -->
-    <!-- ========================================== -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
-    <link rel="preconnect" href="https://drive.google.com">
-    
-    <!-- ========================================== -->
     <!-- 1. External Libraries                      -->
     <!-- ========================================== -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Use specific version of Babel for stability -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -157,9 +148,9 @@
 </head>
 <body>
 
-    <!-- Ribbon -->
+    <!-- Ribbon: Corrected URL -->
     <img src="https://raw.githubusercontent.com/KongNontawatDev/Black-Mourning-Ribbon/2150640c0e623c7fbcca07024287b597f7999a84/ribbon_top_right.png" 
-     alt="Black mourning ribbon" 
+     alt="Black mourning ribbon for websites, top right corner" 
      style="position:fixed; top:0; right:0; width:70px; opacity:0.9; z-index:9999; pointer-events:none;"
      onError="this.src='https://raw.githubusercontent.com/Kaiat/ribbon/master/black-ribbon-top-right.png';">
      
@@ -199,7 +190,6 @@
                      const match = u.match(/[-\w]{25,}/);
                      if (match && match[0]) id = match[0];
                 }
-                // Use a smaller size request first for speed, but high enough for quality
                 if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1920`;
             }
             return u;
@@ -366,7 +356,6 @@
                 <div className="w-full max-w-[1920px] mx-auto relative aspect-[1920/800] bg-primary group overflow-hidden">
                     {displayBanners.map((b, i) => (
                         <div key={i} className={`absolute inset-0 transition-opacity duration-1000 ${i === idx ? 'opacity-100' : 'opacity-0'}`}>
-                            {/* Priority loading for first banner, lazy for others is tricky in slider, but keep standard for LCP */}
                             <img src={getCleanImageUrl(b.ImageURL)} className={`slide-image ${i === idx ? 'slide-active' : ''}`} onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/1920x800/003366/ffffff?text=Image+Error';}} />
                         </div>
                     ))}
@@ -443,7 +432,6 @@
                                     <div className="relative overflow-hidden aspect-[1414/2000]">
                                         <img 
                                             src={getCleanImageUrl(item.ImageURL)} 
-                                            loading="lazy" 
                                             className="w-full h-full object-cover pointer-events-none transition duration-500" 
                                             onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/1414x2000?text=Newsletter';}} 
                                         />
@@ -461,8 +449,10 @@
             );
         };
 
-        const NewsDetail = ({ item, onBack }) => {
-            const hasImage = !!item.ImageURL;
+        const NewsDetail = ({ item, defaultImage, onBack }) => {
+            // UPDATE: Use defaultImage if ImageURL is empty
+            const imageUrl = item.ImageURL ? getCleanImageUrl(item.ImageURL) : (defaultImage ? getCleanImageUrl(defaultImage) : '');
+            const hasImage = !!imageUrl;
             const hasPdf = !!item.PDF_URL;
             const hasLink = !!item.Link_URL;
 
@@ -474,7 +464,7 @@
                             {hasImage && (
                                 <div className="w-full flex justify-center bg-gray-100 border-b border-gray-100">
                                      <img 
-                                        src={getCleanImageUrl(item.ImageURL)} 
+                                        src={imageUrl} 
                                         className="w-full h-auto object-cover"
                                         style={{ maxHeight: '600px', width: 'auto', maxWidth: '100%' }}
                                         onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/1280x720?text=No+Image';}} 
@@ -524,8 +514,10 @@
             );
         };
 
-        const NewsCard = ({ n, onClick }) => {
-            const hasImage = !!n.ImageURL;
+        const NewsCard = ({ n, defaultImage, onClick }) => {
+            // UPDATE: Use defaultImage if ImageURL is empty
+            const imageUrl = n.ImageURL ? getCleanImageUrl(n.ImageURL) : (defaultImage ? getCleanImageUrl(defaultImage) : '');
+            const hasImage = !!imageUrl;
             const hasPdf = !!n.PDF_URL;
 
             return (
@@ -534,8 +526,7 @@
                          {hasImage ? (
                             <>
                                 <img 
-                                    src={getCleanImageUrl(n.ImageURL)} 
-                                    loading="lazy"
+                                    src={imageUrl} 
                                     className="w-full h-full object-cover group-hover:scale-110 transition duration-700" 
                                     onError={(e)=>{e.target.onerror=null; e.target.src='https://via.placeholder.com/400?text=News';}} 
                                 />
@@ -650,6 +641,8 @@
             const [editItem, setEditItem] = useState(null);
             const [form, setForm] = useState({});
             
+            const getConfig = (key) => data.Config.find(c => c.Key === key)?.Value || '';
+
             const [settingsForm, setSettingsForm] = useState({ 
                 SchoolLogo: '', 
                 SchoolName: '',
@@ -657,7 +650,8 @@
                 SchoolAddress: '',
                 SchoolPhone: '', 
                 FacebookName: '',
-                FacebookURL: ''
+                FacebookURL: '',
+                DefaultNewsImage: '' // UPDATE: เพิ่ม field นี้
             });
 
             const labelMap = { 
@@ -694,7 +688,13 @@
 
             const handleAddNew = () => {
                 setEditItem({ _isNew: true });
-                setForm({ Active: 'TRUE' }); 
+                let initialForm = { Active: 'TRUE' };
+                // UPDATE: ถ้าเพิ่มข่าว ให้ดึงรูป default มาใส่เลย
+                if (tab === 'News') {
+                    const defaultImg = getConfig('DefaultNewsImage');
+                    if (defaultImg) initialForm.ImageURL = defaultImg;
+                }
+                setForm(initialForm); 
             };
 
             const handleEdit = (item) => {
@@ -737,7 +737,8 @@
                             { Key: 'SchoolAddress', Value: settingsForm.SchoolAddress },
                             { Key: 'SchoolPhone', Value: settingsForm.SchoolPhone },
                             { Key: 'FacebookName', Value: settingsForm.FacebookName },
-                            { Key: 'FacebookURL', Value: settingsForm.FacebookURL }
+                            { Key: 'FacebookURL', Value: settingsForm.FacebookURL },
+                            { Key: 'DefaultNewsImage', Value: settingsForm.DefaultNewsImage } // UPDATE: save ค่านี้ด้วย
                         ];
 
                         await Promise.all(updates.map(item => 
@@ -818,7 +819,6 @@
             };
             
             const openSettings = () => { 
-                const getConfig = (key) => data.Config.find(c => c.Key === key)?.Value || '';
                 setSettingsForm({ 
                     SchoolLogo: getConfig('SchoolLogo'), 
                     SchoolName: getConfig('SchoolName'),
@@ -826,7 +826,8 @@
                     SchoolAddress: getConfig('SchoolAddress'),
                     SchoolPhone: getConfig('SchoolPhone'),
                     FacebookName: getConfig('FacebookName'),
-                    FacebookURL: getConfig('FacebookURL')
+                    FacebookURL: getConfig('FacebookURL'),
+                    DefaultNewsImage: getConfig('DefaultNewsImage') // UPDATE: Load ค่านี้
                 }); 
                 setEditItem({ settings: true }); 
             }
@@ -919,12 +920,17 @@
                                                     <div><label className="text-sm font-bold text-gray-600 mb-1 block">ชื่อ Facebook</label><input className="w-full border p-3 rounded-lg" value={settingsForm.FacebookName} onChange={e=>setSettingsForm({...settingsForm, FacebookName: e.target.value})} placeholder="เช่น โรงเรียนพุขาม..." /></div>
                                                     <div><label className="text-sm font-bold text-gray-600 mb-1 block">URL Facebook</label><input className="w-full border p-3 rounded-lg" value={settingsForm.FacebookURL} onChange={e=>setSettingsForm({...settingsForm, FacebookURL: e.target.value})} placeholder="https://facebook.com/..." /></div>
                                                 </div>
-                                                <div>
-                                                    <label className="text-sm font-bold text-gray-600 mb-1 block">URL รูปภาพโลโก้ <span className="text-blue-500 font-normal text-xs ml-1">(แนะนำ 512x512 px หรือลิ้งก์ Google Drive)</span></label>
-                                                    <input className="w-full border p-3 rounded-lg bg-gray-50" value={settingsForm.SchoolLogo} onChange={e=>setSettingsForm({...settingsForm, SchoolLogo: e.target.value})} />
-                                                    {settingsForm.SchoolLogo && (
-                                                        <img src={getCleanImageUrl(settingsForm.SchoolLogo)} className="h-16 mt-2 border p-1 rounded" onError={(e)=>e.target.style.display='none'}/>
-                                                    )}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-sm font-bold text-gray-600 mb-1 block">URL รูปภาพโลโก้ <span className="text-blue-500 font-normal text-xs ml-1">(แนะนำ 512x512)</span></label>
+                                                        <input className="w-full border p-3 rounded-lg bg-gray-50" value={settingsForm.SchoolLogo} onChange={e=>setSettingsForm({...settingsForm, SchoolLogo: e.target.value})} />
+                                                        {settingsForm.SchoolLogo && <img src={getCleanImageUrl(settingsForm.SchoolLogo)} className="h-10 mt-2 border p-1 rounded" onError={(e)=>e.target.style.display='none'}/>}
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-sm font-bold text-gray-600 mb-1 block">รูปภาพเริ่มต้นข่าว (Default News Image)</label>
+                                                        <input className="w-full border p-3 rounded-lg bg-gray-50" value={settingsForm.DefaultNewsImage} onChange={e=>setSettingsForm({...settingsForm, DefaultNewsImage: e.target.value})} />
+                                                        {settingsForm.DefaultNewsImage && <img src={getCleanImageUrl(settingsForm.DefaultNewsImage)} className="h-10 mt-2 border p-1 rounded" onError={(e)=>e.target.style.display='none'}/>}
+                                                    </div>
                                                 </div>
                                             </>} 
                                             {tab !== 'Settings' && (
@@ -1138,6 +1144,7 @@
             const schoolPhone = getConfig('SchoolPhone') || '056-792781';
             const fbName = getConfig('FacebookName');
             const fbUrl = getConfig('FacebookURL');
+            const defaultNewsImage = getConfig('DefaultNewsImage'); // UPDATE: ดึงรูป default
 
             const sortedNews = [...data.News].sort((a,b) => {
                 if(a.Order && b.Order) return Number(b.Order) - Number(a.Order);
@@ -1165,19 +1172,19 @@
                                             </div>
                                             <div className="grid md:grid-cols-3 gap-8">
                                                 {sortedNews.slice(0,3).map((n,i)=>(
-                                                    <NewsCard key={i} n={n} onClick={()=>setPage({id:'news_detail', key: n.ID, item: n})} />
+                                                    <NewsCard key={i} n={n} defaultImage={defaultNewsImage} onClick={()=>setPage({id:'news_detail', key: n.ID, item: n})} />
                                                 ))}
                                             </div>
                                         </div>
                                     </>
                                 )}
-                                {page.id === 'news' && <div className="content-container py-12"><h2 className="text-3xl font-bold text-center mb-10 text-primary">ข่าวสารทั้งหมด</h2><div className="grid md:grid-cols-3 gap-8">{sortedNews.map((n,i)=>(<NewsCard key={i} n={n} onClick={()=>setPage({id:'news_detail', key: n.ID, item: n})} />))}</div></div>}
+                                {page.id === 'news' && <div className="content-container py-12"><h2 className="text-3xl font-bold text-center mb-10 text-primary">ข่าวสารทั้งหมด</h2><div className="grid md:grid-cols-3 gap-8">{sortedNews.map((n,i)=>(<NewsCard key={i} n={n} defaultImage={defaultNewsImage} onClick={()=>setPage({id:'news_detail', key: n.ID, item: n})} />))}</div></div>}
                                 {page.id === 'news_detail' && (
                                     (() => {
                                         const newsItem = page.item || (data && data.News && page.key ? data.News.find(n => n.ID == page.key) : null);
                                         
                                         if (newsItem) {
-                                            return <NewsDetail item={newsItem} onBack={()=>setPage({id: 'news'})} />;
+                                            return <NewsDetail item={newsItem} defaultImage={defaultNewsImage} onBack={()=>setPage({id: 'news'})} />;
                                         } else {
                                             return <div className="p-12 text-center text-gray-500">กำลังโหลดข้อมูล หรือไม่พบข้อมูลข่าว... <br/>(หากรอนานกรุณากดรีเฟรช หรือกลับไปหน้าข่าวประชาสัมพันธ์)</div>;
                                         }
@@ -1206,7 +1213,7 @@
                                     ); 
                                 })()}</div></div>}
                                 {page.id === 'personnel' && <div className="content-container py-12"><h2 className="text-3xl font-bold text-center mb-12 text-primary">บุคลากร</h2><div className="grid grid-cols-1 md:grid-cols-4 gap-8">{sortedPersonnel.map((p,i)=>(<div key={i} className="bg-white p-8 rounded-2xl shadow-sm text-center border hover:shadow-xl transition transform hover:-translate-y-2">
-                                <img src={getCleanImageUrl(p.ImageURL)} loading="lazy" className="w-32 h-32 mx-auto rounded-full object-cover mb-4 shadow-md border-4 border-white" onError={(e)=>e.target.src='https://via.placeholder.com/150'} /><h4 className="font-bold text-xl text-primary">{p.Name}</h4><p className="text-slate-500 text-sm font-medium mt-1">{p.Position}</p><span className="text-xs text-primary bg-blue-50 px-3 py-1 rounded-full mt-3 inline-block font-semibold">{p.Group}</span></div>))}</div></div>}
+                                <img src={getCleanImageUrl(p.ImageURL)} className="w-32 h-32 mx-auto rounded-full object-cover mb-4 shadow-md border-4 border-white" onError={(e)=>e.target.src='https://via.placeholder.com/150'} /><h4 className="font-bold text-xl text-primary">{p.Name}</h4><p className="text-slate-500 text-sm font-medium mt-1">{p.Position}</p><span className="text-xs text-primary bg-blue-50 px-3 py-1 rounded-full mt-3 inline-block font-semibold">{p.Group}</span></div>))}</div></div>}
                             </main>
                             
                             <Footer 
