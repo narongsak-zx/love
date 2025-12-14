@@ -241,8 +241,8 @@
                 menuRows.push(sortedMenus.slice(i, i + 7));
             }
 
-            // UPDATE: ใช้ Title หรือ PageHeader ใน dropdown ก็ได้ แต่ปกติ dropdown ใช้ Title
-            const getSubMenu = (cat) => pages.filter(p => p.MenuCategory === cat).sort((a,b) => Number(a.Order||0) - Number(b.Order||0)).map(p => ({id: p.PageKey, label: p.Title}));
+            // UPDATE: Use PageLabel for dropdown menu text if available, otherwise fallback to Title
+            const getSubMenu = (cat) => pages.filter(p => p.MenuCategory === cat).sort((a,b) => Number(a.Order||0) - Number(b.Order||0)).map(p => ({id: p.PageKey, label: p.PageLabel || p.Title}));
             
             const handleSubMenuClick = (e, id) => { 
                 e.stopPropagation(); 
@@ -653,10 +653,8 @@
                 DefaultNewsImage: '' 
             });
 
-            // UPDATE: ปรับ labelTitle และเพิ่ม PageHeader
             const labelMap = { 
-                'Title': 'ชื่อเรียกหน้า (Admin / Tab)', 
-                'PageHeader': 'หัวข้อที่แสดงบนหน้าเว็บ (Header)', // NEW
+                'Title': 'หัวข้อ / ชื่อ', 
                 'Content': 'เนื้อหา (HTML/Embed)', 
                 'ImageURL': 'ลิงก์รูปภาพ (URL)', 
                 'PDF_URL': 'ลิ้งก์ PDF (Google Drive)',
@@ -674,7 +672,8 @@
                 'ID': 'รหัสอ้างอิง', 
                 'PageKey': 'รหัสหน้า', 
                 'MenuCategory': 'แสดงในเมนูหลัก', 
-                'Order': 'ลำดับการแสดงผล' 
+                'Order': 'ลำดับการแสดงผล',
+                'PageLabel': 'ชื่อเมนูย่อย (ใน Navbar)' // UPDATE: เพิ่ม Label map
             };
             const getLabel = (key) => labelMap[key] || key;
             
@@ -708,17 +707,17 @@
                             ...initialForm,
                             _pageKey: linkedPage.PageKey,
                             _pageTitle: linkedPage.Title,
-                            _pageHeader: linkedPage.PageHeader || linkedPage.Title, // NEW: Load Header
                             _pageContent: linkedPage.Content,
-                            _pageImage: linkedPage.ImageURL
+                            _pageImage: linkedPage.ImageURL,
+                            _pageLabel: linkedPage.PageLabel // UPDATE: Load PageLabel
                         };
                     } else {
                         initialForm = {
                             ...initialForm,
                             _pageTitle: item.Label,
-                            _pageHeader: item.Label, // Default
                             _pageContent: '',
-                            _pageImage: ''
+                            _pageImage: '',
+                            _pageLabel: ''
                         };
                     }
                 }
@@ -760,11 +759,11 @@
                             const pagePayload = {
                                 PageKey: form._pageKey || ('page_' + Date.now()), 
                                 Title: form._pageTitle || form.Label,
-                                PageHeader: form._pageHeader || form._pageTitle || form.Label, // NEW: Save PageHeader
                                 Content: form._pageContent || '',
                                 ImageURL: form._pageImage || '',
                                 MenuCategory: form.ID, 
-                                Order: 1
+                                Order: 1,
+                                PageLabel: form._pageLabel || '' // UPDATE: Save PageLabel for Main Menu Pages
                             };
                             await api.post({ action: 'save', sheet: 'Pages', data: pagePayload });
                         }
@@ -944,7 +943,7 @@
                                             )}
                                             {tab === 'Menus' && <>
                                                 <div><label className="text-sm font-bold text-gray-600 mb-1 block">ID (ห้ามซ้ำ)</label><input className="w-full border p-3 rounded-lg bg-gray-50 disabled:text-gray-400" value={form.ID||''} onChange={e=>setForm({...form, ID: e.target.value})} disabled={!editItem._isNew} placeholder="เช่น menu_about" /></div>
-                                                <div><label className="text-sm font-bold text-gray-600 mb-1 block">ชื่อเมนู (Label)</label><input className="w-full border p-3 rounded-lg" value={form.Label||''} onChange={e=>setForm({...form, Label: e.target.value})} /></div>
+                                                <div><label className="text-sm font-bold text-gray-600 mb-1 block">ชื่อเมนู</label><input className="w-full border p-3 rounded-lg" value={form.Label||''} onChange={e=>setForm({...form, Label: e.target.value})} /></div>
                                                 <div>
                                                     <label className="text-sm font-bold text-gray-600 mb-1 block">ประเภท</label>
                                                     <select className="w-full border p-3 rounded-lg" value={form.Type||'link'} onChange={e=>setForm({...form, Type: e.target.value})}>
@@ -959,15 +958,9 @@
                                                         <h4 className="text-primary font-bold text-lg mb-4 flex items-center gap-2"><i className="fas fa-file-alt"></i> จัดการเนื้อหาของหน้านี้</h4>
                                                         
                                                         <div className="space-y-4">
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                <div>
-                                                                    <label className="text-sm font-bold text-gray-600 mb-1 block">ชื่อหน้า (Title - ใช้ใน Admin/Title Bar)</label>
-                                                                    <input className="w-full border p-3 rounded-lg bg-white" value={form._pageTitle||''} onChange={e=>setForm({...form, _pageTitle: e.target.value})} placeholder="เช่น ประวัติโรงเรียน" />
-                                                                </div>
-                                                                <div>
-                                                                    <label className="text-sm font-bold text-gray-600 mb-1 block">หัวข้อบนเว็บ (Header - ตัวใหญ่)</label>
-                                                                    <input className="w-full border p-3 rounded-lg bg-white" value={form._pageHeader||''} onChange={e=>setForm({...form, _pageHeader: e.target.value})} placeholder="เช่น ประวัติความเป็นมา ๒๕๖๘" />
-                                                                </div>
+                                                            <div>
+                                                                <label className="text-sm font-bold text-gray-600 mb-1 block">หัวข้อในหน้าเนื้อหา</label>
+                                                                <input className="w-full border p-3 rounded-lg bg-white" value={form._pageTitle||''} onChange={e=>setForm({...form, _pageTitle: e.target.value})} placeholder="เช่น ประวัติโรงเรียน (ถ้าไม่ใส่จะใช้ชื่อเมนู)" />
                                                             </div>
                                                             <div>
                                                                 <label className="text-sm font-bold text-gray-600 mb-1 block">รูปภาพหัวเรื่อง (URL)</label>
@@ -1008,10 +1001,11 @@
                                             {tab === 'Newsletters' && (<div><label className="text-sm font-bold text-gray-600 mb-1 block">หัวข้อจดหมายข่าว</label><input className="w-full border p-3 rounded-lg" value={form.Title||''} onChange={e=>setForm({...form, Title: e.target.value})} placeholder="ใส่ชื่อจดหมายข่าว" /></div>)}
                                             {tab === 'Pages' && <>
                                                 {editItem._isNew && <div><label className="text-sm font-bold text-gray-600 mb-1 block">PageKey (ห้ามซ้ำ)</label><input className="w-full border p-3 rounded-lg" value={form.ID||''} onChange={e=>setForm({...form, ID: e.target.value})} placeholder="เช่น page_history" /></div>}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div><label className="text-sm font-bold text-gray-600 mb-1 block">ชื่อหน้า (Title - ใช้ใน Admin)</label><input className="w-full border p-3 rounded-lg" value={form.Title||''} onChange={e=>setForm({...form, Title: e.target.value})} /></div>
-                                                    <div><label className="text-sm font-bold text-gray-600 mb-1 block">หัวข้อบนเว็บ (Header)</label><input className="w-full border p-3 rounded-lg" value={form.PageHeader||''} onChange={e=>setForm({...form, PageHeader: e.target.value})} /></div>
-                                                </div>
+                                                
+                                                {/* UPDATE: แยก Title และ PageLabel */}
+                                                <div><label className="text-sm font-bold text-gray-600 mb-1 block">หัวข้อหน้า (แสดงในเนื้อหา)</label><input className="w-full border p-3 rounded-lg" value={form.Title||''} onChange={e=>setForm({...form, Title: e.target.value})} placeholder="เช่น ประวัติและความเป็นมา" /></div>
+                                                <div><label className="text-sm font-bold text-gray-600 mb-1 block">ชื่อเมนูย่อย (แสดงใน Navbar)</label><input className="w-full border p-3 rounded-lg bg-blue-50" value={form.PageLabel||''} onChange={e=>setForm({...form, PageLabel: e.target.value})} placeholder="เช่น ประวัติโรงเรียน (ถ้าไม่ใส่จะใช้เหมือนหัวข้อ)" /></div>
+                                                
                                                 <div>
                                                     <label className="text-sm font-bold text-gray-600 mb-1 block">เมนูหลัก (เชื่อมโยง)</label>
                                                     <select className="w-full border p-3 rounded-lg" value={form.MenuCategory||''} onChange={e=>setForm({...form, MenuCategory: e.target.value})}>
@@ -1024,7 +1018,7 @@
                                             </>} 
                                             
                                             {Object.keys(tab === 'Settings' ? {} : (editItem._isNew ? (data[tab][0] || {}) : editItem)).map(k => { 
-                                                if(['ID','Date','PageKey','Key','MenuCategory','Title','PageHeader','Label','Type','Order','_isNew','settings'].includes(k)) return null; 
+                                                if(['ID','Date','PageKey','Key','MenuCategory','Title','Label','Type','Order','_isNew','settings', 'PageLabel'].includes(k)) return null; 
                                                 if(k.startsWith('_page')) return null; 
                                                 if(tab === 'News' && (k === 'Content' || k === 'PDF_URL' || k === 'Link_URL' || k === 'Link_Label')) return null; 
                                                 return <div key={k}><label className="text-sm font-bold text-gray-600 mb-1 block">{getLabel(k)}{k === 'ImageURL' && imageHints[tab] && <span className="text-blue-500 font-normal text-xs ml-2">({imageHints[tab]})</span>}</label>{k === 'Content' ? <div className="space-y-1"><textarea className="w-full border p-3 rounded-lg h-48 font-mono text-sm" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} placeholder="ใส่ข้อความ หรือ HTML"></textarea></div> : <input className="w-full border p-3 rounded-lg" value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} />}</div> 
@@ -1207,8 +1201,7 @@
                                     const pageImages = p.ImageURL ? p.ImageURL.split(',').map(url => url.trim()).filter(url => url) : [];
                                     return (
                                         <>
-                                            {/* UPDATE: ใช้ PageHeader ถ้ามี ถ้าไม่มีใช้ Title */}
-                                            <h2 className="text-4xl font-bold text-primary mb-8 pb-4 border-b border-gray-200">{p.PageHeader || p.Title}</h2>
+                                            <h2 className="text-4xl font-bold text-primary mb-8 pb-4 border-b border-gray-200">{p.Title}</h2>
                                             <div className="prose prose-lg max-w-none text-slate-700 leading-relaxed html-content" dangerouslySetInnerHTML={{__html: p.Content}} />
                                             {pageImages.length > 0 && (
                                                 <div className="mt-10 flex flex-col items-center">
